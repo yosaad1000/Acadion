@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: student-management-backend-prod
+    container_name: acadion-backend-prod
     ports:
       - "8000:8000"
     env_file:
@@ -16,27 +16,38 @@ services:
     restart: unless-stopped
     depends_on:
       - redis
+    networks:
+      - acadion-network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: student-management-frontend-prod
+    container_name: acadion-frontend-prod
     ports:
       - "80:80"
+      - "443:443"
     restart: unless-stopped
     depends_on:
       - backend
+    networks:
+      - acadion-network
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
 
   redis:
     image: redis:7-alpine
-    container_name: student-management-redis-prod
-    ports:
-      - "6379:6379"
+    container_name: acadion-redis-prod
     restart: unless-stopped
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    networks:
+      - acadion-network
 
 volumes:
   redis_data:
+
+networks:
+  acadion-network:
+    driver: bridge
