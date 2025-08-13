@@ -8,7 +8,8 @@ import {
   CalendarIcon, 
   CameraIcon,
   ClipboardDocumentListIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 
 interface ClassData {
@@ -298,8 +299,76 @@ const ClassRoom: React.FC = () => {
 
         {activeTab === 'attendance' && (
           <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Attendance Records</h2>
-            <p className="text-gray-500 text-center py-8">Attendance tracking coming soon...</p>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900">Attendance Overview</h2>
+              {user?.user_type === 'teacher' ? (
+                <button
+                  onClick={() => navigate(`/attendance-dashboard/${classData.subject_id}`)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                >
+                  <ChartBarIcon className="h-4 w-4 mr-2" />
+                  View Full Dashboard
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate(`/student-attendance/${classData.subject_id}`)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+                >
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  View My Attendance
+                </button>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center">
+                  <UserGroupIcon className="h-8 w-8 text-blue-500" />
+                  <div className="ml-3">
+                    <div className="text-2xl font-bold text-gray-900">{classData.student_count}</div>
+                    <div className="text-sm text-gray-600">Total Students</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center">
+                  <CalendarIcon className="h-8 w-8 text-green-500" />
+                  <div className="ml-3">
+                    <div className="text-2xl font-bold text-gray-900">0</div>
+                    <div className="text-sm text-gray-600">Sessions This Month</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center">
+                  <ClipboardDocumentListIcon className="h-8 w-8 text-purple-500" />
+                  <div className="ml-3">
+                    <div className="text-2xl font-bold text-gray-900">0%</div>
+                    <div className="text-sm text-gray-600">Average Attendance</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 text-center">
+              <p className="text-gray-600 mb-4">
+                {user?.user_type === 'teacher' 
+                  ? 'Start taking attendance to see detailed analytics and reports.'
+                  : 'Your attendance records will appear here once classes begin.'
+                }
+              </p>
+              {user?.user_type === 'teacher' && (
+                <button
+                  onClick={() => navigate(`/take-attendance/${classData.subject_id}`)}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  <CameraIcon className="h-4 w-4 mr-2" />
+                  Take First Attendance
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

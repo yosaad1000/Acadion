@@ -10,6 +10,8 @@ import CreateClass from './pages/CreateClass';
 import JoinClass from './pages/JoinClass';
 import ClassRoom from './pages/ClassRoom';
 import TakeAttendance from './pages/TakeAttendance';
+import AttendanceDashboard from './pages/AttendanceDashboard';
+import StudentAttendance from './pages/StudentAttendance';
 import ViewStudents from './pages/ViewStudents';
 import Profile from './pages/Profile';
 import './App.css';
@@ -64,6 +66,8 @@ const AppRoutes: React.FC = () => {
         <Route path="join-class" element={<JoinClass />} />
         <Route path="class/:classId" element={<ClassRoom />} />
         <Route path="take-attendance/:classId" element={<TakeAttendance />} />
+        <Route path="attendance-dashboard/:classId" element={<AttendanceDashboard />} />
+        <Route path="student-attendance/:classId" element={<StudentAttendance />} />
         <Route path="students" element={<ViewStudents />} />
         <Route path="profile" element={<Profile />} />
         <Route path="" element={<Navigate to="/dashboard" />} />
