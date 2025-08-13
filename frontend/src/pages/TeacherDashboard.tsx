@@ -138,9 +138,9 @@ const TeacherDashboard: React.FC = () => {
               <AcademicCapIcon className="h-8 w-8 text-orange-500" />
               <div className="ml-4">
                 <div className="text-2xl font-bold text-gray-900">
-                  {subjects.length > 0 ? '85%' : '0%'}
+                  {subjects.length}
                 </div>
-                <div className="text-sm text-gray-600">Avg Attendance</div>
+                <div className="text-sm text-gray-600">Active Classes</div>
               </div>
             </div>
           </div>

@@ -78,7 +78,8 @@ async def mark_attendance_by_face(
                     "message": "Student not enrolled in this subject."
                 }
             
-            # Mark attendance
+            # Mark attendance with timestamp to allow multiple per day
+            from datetime import datetime
             attendance_data = {
                 "subject_id": subject_id,
                 "student_id": student_id,
@@ -86,7 +87,8 @@ async def mark_attendance_by_face(
                 "status": "present",
                 "marked_by": current_user.user_id,
                 "confidence_score": confidence_score,
-                "method": "face_recognition"
+                "method": "face_recognition",
+                "session_time": datetime.now().strftime("%H:%M:%S")
             }
             
             print(f"📊 Marking attendance with data: {attendance_data}")

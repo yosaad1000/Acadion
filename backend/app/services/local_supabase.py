@@ -399,13 +399,14 @@ class LocalSupabase:
                     headers=self.headers,
                     params={
                         "subject_id": f"eq.{subject_id}",
-                        "is_active": "eq.true",
-                        "select": "count"
+                        "is_active": "eq.true"
                     }
                 )
                 if response.status_code == 200:
-                    result = response.json()
-                    return result[0]["count"] if result else 0
+                    enrollments = response.json()
+                    count = len(enrollments)
+                    print(f"📊 Subject {subject_id} has {count} students enrolled")
+                    return count
                 return 0
         except Exception as e:
             logger.error(f"Error getting student count: {e}")
@@ -430,7 +431,7 @@ class LocalSupabase:
         """Mark attendance for a student"""
         try:
             async with httpx.AsyncClient() as client:
-                # Try to insert first
+                # Always try to insert new record (allow multiple per day)
                 response = await client.post(
                     f"{self.base_url}/rest/v1/attendance",
                     headers=self.headers,
@@ -442,32 +443,29 @@ class LocalSupabase:
                 if response.status_code in [200, 201]:
                     print(f"✅ Attendance marked successfully in database")
                     return True
-                elif response.status_code == 409:  # Duplicate key error
-                    print(f"🔄 Attendance already exists, updating existing record...")
+                elif response.status_code == 409:  # Duplicate key error - try with timestamp
+                    print(f"🔄 Duplicate found, adding timestamp to make unique...")
                     
-                    # Update existing record
-                    update_response = await client.patch(
+                    # Add current timestamp to make it unique
+                    from datetime import datetime
+                    attendance_data_with_time = {
+                        **attendance_data,
+                        "created_at": datetime.now().isoformat()
+                    }
+                    
+                    # Try again with timestamp
+                    retry_response = await client.post(
                         f"{self.base_url}/rest/v1/attendance",
                         headers=self.headers,
-                        params={
-                            "subject_id": f"eq.{attendance_data['subject_id']}",
-                            "student_id": f"eq.{attendance_data['student_id']}",
-                            "date": f"eq.{attendance_data['date']}"
-                        },
-                        json={
-                            "status": attendance_data["status"],
-                            "confidence_score": attendance_data.get("confidence_score"),
-                            "method": attendance_data["method"],
-                            "marked_by": attendance_data["marked_by"]
-                        }
+                        json=attendance_data_with_time
                     )
                     
-                    print(f"📊 Update API Response: {update_response.status_code}")
-                    if update_response.status_code in [200, 204]:
-                        print(f"✅ Attendance updated successfully in database")
+                    print(f"📊 Retry API Response: {retry_response.status_code}")
+                    if retry_response.status_code in [200, 201]:
+                        print(f"✅ Attendance marked successfully with timestamp")
                         return True
                     else:
-                        print(f"❌ Update API Error: {update_response.text}")
+                        print(f"❌ Retry API Error: {retry_response.text}")
                         return False
                 else:
                     print(f"❌ Attendance API Error: {response.text}")
