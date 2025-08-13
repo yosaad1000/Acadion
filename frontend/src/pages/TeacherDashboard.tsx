@@ -63,7 +63,7 @@ const TeacherDashboard: React.FC = () => {
     return colors[index % colors.length];
   };
 
-  const totalStudents = subjects.reduce((sum, subject) => sum + subject.student_count, 0);
+
 
   if (loading) {
     return (
@@ -102,23 +102,13 @@ const TeacherDashboard: React.FC = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <div className="flex items-center">
               <BookOpenIcon className="h-8 w-8 text-blue-500" />
               <div className="ml-4">
                 <div className="text-2xl font-bold text-gray-900">{subjects.length}</div>
                 <div className="text-sm text-gray-600">Classes Created</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <div className="flex items-center">
-              <UserGroupIcon className="h-8 w-8 text-green-500" />
-              <div className="ml-4">
-                <div className="text-2xl font-bold text-gray-900">{totalStudents}</div>
-                <div className="text-sm text-gray-600">Total Students</div>
               </div>
             </div>
           </div>
@@ -138,9 +128,9 @@ const TeacherDashboard: React.FC = () => {
               <AcademicCapIcon className="h-8 w-8 text-orange-500" />
               <div className="ml-4">
                 <div className="text-2xl font-bold text-gray-900">
-                  {subjects.length}
+                  {subjects.length > 0 ? 'Ready' : 'None'}
                 </div>
-                <div className="text-sm text-gray-600">Active Classes</div>
+                <div className="text-sm text-gray-600">Classes Status</div>
               </div>
             </div>
           </div>
