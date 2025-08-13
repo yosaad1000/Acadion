@@ -171,7 +171,7 @@ async def get_attendance_dashboard(
         
         # Calculate statistics
         total_students = len(students)
-        total_sessions = len(set(record.get('date') for record in records))
+        total_sessions = len(set(record.get('date') for record in records)) if records else 0
         present_count = len([r for r in records if r.get('status') == 'present'])
         
         return {

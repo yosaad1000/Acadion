@@ -36,6 +36,7 @@ const ClassRoom: React.FC = () => {
   const { user } = useAuth();
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'stream' | 'people' | 'attendance'>('stream');
   const [loading, setLoading] = useState(true);
 
@@ -45,8 +46,11 @@ const ClassRoom: React.FC = () => {
       if (user?.user_type === 'teacher') {
         fetchStudents();
       }
+      if (activeTab === 'attendance') {
+        fetchAttendanceData();
+      }
     }
-  }, [classId]);
+  }, [classId, activeTab]);
 
   const fetchClassData = async () => {
     try {
@@ -79,6 +83,25 @@ const ClassRoom: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching students:', error);
+    }
+  };
+
+  const fetchAttendanceData = async () => {
+    try {
+      const response = await fetch(`/api/attendance/${classId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAttendanceRecords(data);
+        console.log('📊 Attendance data loaded:', data);
+      } else {
+        console.error('Failed to fetch attendance data:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
     }
   };
 
@@ -335,8 +358,10 @@ const ClassRoom: React.FC = () => {
                 <div className="flex items-center">
                   <CalendarIcon className="h-8 w-8 text-green-500" />
                   <div className="ml-3">
-                    <div className="text-2xl font-bold text-gray-900">0</div>
-                    <div className="text-sm text-gray-600">Sessions This Month</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {attendanceRecords.length > 0 ? new Set(attendanceRecords.map(r => r.date)).size : 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Sessions Recorded</div>
                   </div>
                 </div>
               </div>
@@ -345,12 +370,53 @@ const ClassRoom: React.FC = () => {
                 <div className="flex items-center">
                   <ClipboardDocumentListIcon className="h-8 w-8 text-purple-500" />
                   <div className="ml-3">
-                    <div className="text-2xl font-bold text-gray-900">0%</div>
-                    <div className="text-sm text-gray-600">Average Attendance</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {attendanceRecords.length > 0 ? 
+                        `${Math.round((attendanceRecords.filter(r => r.status === 'present').length / attendanceRecords.length) * 100)}%` : 
+                        '0%'
+                      }
+                    </div>
+                    <div className="text-sm text-gray-600">Attendance Rate</div>
                   </div>
                 </div>
               </div>
             </div>
+            
+            {/* Recent Attendance Records */}
+            {attendanceRecords.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-semibold text-gray-900 mb-3">Recent Attendance</h4>
+                <div className="space-y-2">
+                  {attendanceRecords
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .slice(0, 5)
+                    .map((record, index) => (
+                      <div key={index} className="flex items-center justify-between py-2 px-3 bg-white rounded border">
+                        <div className="flex items-center">
+                          <div className={`w-3 h-3 rounded-full mr-3 ${
+                            record.status === 'present' ? 'bg-green-500' : 
+                            record.status === 'late' ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}></div>
+                          <div>
+                            <div className="text-sm font-medium">{record.student_name || 'Student'}</div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(record.date).toLocaleDateString()} • {record.method === 'face_recognition' ? 'Face Recognition' : 'Manual'}
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          record.status === 'present' ? 'bg-green-100 text-green-800' :
+                          record.status === 'late' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {record.status}
+                        </span>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
             
             <div className="mt-6 text-center">
               <p className="text-gray-600 mb-4">
