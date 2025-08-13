@@ -443,30 +443,10 @@ class LocalSupabase:
                 if response.status_code in [200, 201]:
                     print(f"✅ Attendance marked successfully in database")
                     return True
-                elif response.status_code == 409:  # Duplicate key error - try with timestamp
-                    print(f"🔄 Duplicate found, adding timestamp to make unique...")
-                    
-                    # Add current timestamp to make it unique
-                    from datetime import datetime
-                    attendance_data_with_time = {
-                        **attendance_data,
-                        "created_at": datetime.now().isoformat()
-                    }
-                    
-                    # Try again with timestamp
-                    retry_response = await client.post(
-                        f"{self.base_url}/rest/v1/attendance",
-                        headers=self.headers,
-                        json=attendance_data_with_time
-                    )
-                    
-                    print(f"📊 Retry API Response: {retry_response.status_code}")
-                    if retry_response.status_code in [200, 201]:
-                        print(f"✅ Attendance marked successfully with timestamp")
-                        return True
-                    else:
-                        print(f"❌ Retry API Error: {retry_response.text}")
-                        return False
+                elif response.status_code == 409:  # Duplicate key error
+                    print(f"🔄 Duplicate found - this means attendance already exists for today")
+                    print(f"✅ Treating as successful (attendance already recorded)")
+                    return True  # Treat as success since attendance is already recorded
                 else:
                     print(f"❌ Attendance API Error: {response.text}")
                     return False

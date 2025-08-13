@@ -59,54 +59,63 @@ async def mark_attendance_by_face(
         from app.services.face_recognition import face_recognition_service
         result = face_recognition_service.recognize_student(image_data)
         
-        if result["success"]:
-            student_id = result["student_id"]
-            confidence_score = result["similarity_score"]
+        if result["success"] and result.get("recognized_students"):
+            # Mark attendance for ALL recognized students, not just the best match
+            recognized_students = result["recognized_students"]
+            attendance_marked_count = 0
+            attendance_failed_count = 0
+            marked_students = []
             
-            print(f"🎯 Recognized student: {student_id}")
-            print(f"📚 Subject ID: {subject_id}")
+            print(f"🎯 Processing {len(recognized_students)} recognized students")
             
-            # Check if student is enrolled in this subject
-            is_enrolled = await db.is_student_enrolled(subject_id, student_id)
-            print(f"📝 Student enrolled: {is_enrolled}")
+            for student_data in recognized_students:
+                student_id = student_data["student_id"]
+                confidence_score = student_data["similarity_score"]
+                
+                print(f"📝 Processing student: {student_id}")
+                
+                # Check if student is enrolled in this subject
+                is_enrolled = await db.is_student_enrolled(subject_id, student_id)
+                print(f"📝 Student {student_id} enrolled: {is_enrolled}")
+                
+                if is_enrolled:
+                    # Mark attendance for this student
+                    attendance_data = {
+                        "subject_id": subject_id,
+                        "student_id": student_id,
+                        "date": str(date.today()),
+                        "status": "present",
+                        "marked_by": current_user.user_id,
+                        "confidence_score": confidence_score,
+                        "method": "face_recognition"
+                    }
+                    
+                    print(f"📊 Marking attendance for student: {student_id}")
+                    success = await db.mark_attendance(attendance_data)
+                    print(f"✅ Attendance result for {student_id}: {success}")
+                    
+                    if success:
+                        attendance_marked_count += 1
+                        marked_students.append(student_id)
+                    else:
+                        attendance_failed_count += 1
+                else:
+                    print(f"⚠️ Student {student_id} not enrolled in this subject")
             
-            if not is_enrolled:
-                # Still return the face detection results even if student not enrolled
+            # Return results based on how many students were marked
+            if attendance_marked_count > 0:
                 return {
                     **result,  # Include all face detection results
-                    "success": False,
-                    "message": "Student not enrolled in this subject."
-                }
-            
-            # Mark attendance with timestamp to allow multiple per day
-            from datetime import datetime
-            attendance_data = {
-                "subject_id": subject_id,
-                "student_id": student_id,
-                "date": str(date.today()),
-                "status": "present",
-                "marked_by": current_user.user_id,
-                "confidence_score": confidence_score,
-                "method": "face_recognition",
-                "session_time": datetime.now().strftime("%H:%M:%S")
-            }
-            
-            print(f"📊 Marking attendance with data: {attendance_data}")
-            success = await db.mark_attendance(attendance_data)
-            print(f"✅ Attendance marking result: {success}")
-            
-            if success:
-                return {
-                    **result,  # Include all face detection results
-                    "message": "Attendance marked successfully!",
+                    "message": f"Attendance marked successfully for {attendance_marked_count} student(s)!",
                     "attendance_marked": True,
-                    "student_id": student_id
+                    "marked_students": marked_students,
+                    "marked_count": attendance_marked_count
                 }
             else:
                 return {
                     **result,  # Include all face detection results
                     "success": False,
-                    "message": "Failed to mark attendance. Please try again."
+                    "message": "No students were enrolled in this subject or attendance marking failed."
                 }
         else:
             # Return all the detailed face detection results even on failure
