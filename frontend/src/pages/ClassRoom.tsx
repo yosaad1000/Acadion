@@ -153,7 +153,11 @@ const ClassRoom: React.FC = () => {
             {user?.user_type === 'teacher' && (
               <div className="flex items-center space-x-3">
                 <InviteCodeDisplay code={classData.invite_code} size="md" />
-                <button className="p-2 text-gray-400 hover:text-gray-600">
+                <button 
+                  onClick={() => navigate(`/class/${classId}/settings`)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
+                  title="Class Settings"
+                >
                   <Cog6ToothIcon className="h-5 w-5" />
                 </button>
               </div>

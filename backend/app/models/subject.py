@@ -28,3 +28,14 @@ class SubjectEnrollmentResponse(BaseModel):
     teacher_name: str
     enrolled_at: datetime
     is_active: bool
+
+class SubjectUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class EnrolledStudent(BaseModel):
+    user_id: str
+    name: str
+    email: str
+    is_face_registered: bool
+    enrolled_at: datetime

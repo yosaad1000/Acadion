@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
+import PerformanceMonitor from './components/PerformanceMonitor';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import StudentDashboard from './pages/StudentDashboard';
@@ -14,6 +15,7 @@ import AttendanceDashboard from './pages/AttendanceDashboard';
 import StudentAttendance from './pages/StudentAttendance';
 import ViewStudents from './pages/ViewStudents';
 import Profile from './pages/Profile';
+import ClassSettingsPage from './pages/ClassSettings';
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -70,6 +72,7 @@ const AppRoutes: React.FC = () => {
         <Route path="student-attendance/:classId" element={<StudentAttendance />} />
         <Route path="students" element={<ViewStudents />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="class/:classId/settings" element={<ClassSettingsPage />} />
         <Route path="" element={<Navigate to="/dashboard" />} />
       </Route>
     </Routes>
@@ -81,6 +84,7 @@ function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
+        <PerformanceMonitor />
       </Router>
     </AuthProvider>
   );

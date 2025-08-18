@@ -85,3 +85,62 @@ export interface ApiResponse<T> {
   message?: string;
   error?: string;
 }
+
+// Calendar Integration Types
+export interface CalendarConnection {
+  id: number;
+  user_id: number;
+  provider: string;
+  calendar_id?: string;
+  is_connected: boolean;
+  created_at: string;
+}
+
+export interface RecurrencePattern {
+  type: 'weekly' | 'biweekly' | 'custom';
+  interval: number;
+  days_of_week: number[]; // 0=Monday, 6=Sunday
+  end_date?: string;
+  occurrence_count?: number;
+}
+
+export interface ClassSchedule {
+  id: number;
+  teacher_id: number;
+  subject_id: number;
+  title: string;
+  description?: string;
+  start_datetime: string;
+  duration_minutes: number;
+  recurrence_pattern?: RecurrencePattern;
+  google_event_id?: string;
+  is_active: boolean;
+  instances?: ScheduleInstance[];
+}
+
+export interface ClassScheduleCreate {
+  subject_id: number;
+  title: string;
+  description?: string;
+  start_datetime: string;
+  duration_minutes: number;
+  recurrence_pattern?: RecurrencePattern;
+}
+
+export interface ScheduleInstance {
+  id: number;
+  schedule_id: number;
+  instance_datetime: string;
+  google_event_id?: string;
+  status: 'scheduled' | 'cancelled' | 'completed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentScheduleAccess {
+  id: number;
+  student_id: number;
+  schedule_id: number;
+  sync_to_personal_calendar: boolean;
+  created_at: string;
+}

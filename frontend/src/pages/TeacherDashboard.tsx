@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import InviteCodeDisplay from '../components/InviteCodeDisplay';
+import { useSubjects } from '../hooks/useOptimizedAPI';
+import { performanceMonitor } from '../utils/performance';
 import { 
   PlusIcon, 
   BookOpenIcon, 
   UserGroupIcon,
   CalendarIcon,
   ClipboardDocumentListIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 
 interface TeachingSubject {
@@ -24,30 +27,27 @@ interface TeachingSubject {
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [subjects, setSubjects] = useState<TeachingSubject[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchTeachingSubjects();
-  }, []);
-
-  const fetchTeachingSubjects = async () => {
-    try {
-      const response = await fetch('/api/subjects', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(data);
-      }
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  // Use optimized API hook with caching
+  const { data: subjects = [], loading, error, refetch } = useSubjects();
+  console.log(subjects); 
+  console.log("Subjects loaded:", subjects.length);
+  // Memoized calculations for better performance
+  const dashboardStats = useMemo(() => {
+    const endTimer = performanceMonitor.startTimer('teacher_dashboard_stats');
+    
+    const totalStudents = subjects.reduce((total, subject) => total + (subject.student_count ?? 0), 0);
+    const activeClasses = subjects.filter(subject => subject.student_count > 0).length;
+    
+    const stats = {
+      totalClasses: subjects.length,
+      totalStudents,
+      activeClasses
+    };
+    
+    endTimer();
+    return stats;
+  }, [subjects]);
 
   const getSubjectColor = (index: number) => {
     const colors = [
@@ -68,7 +68,29 @@ const TeacherDashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your classes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+            <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Classes</h3>
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -107,8 +129,18 @@ const TeacherDashboard: React.FC = () => {
             <div className="flex items-center">
               <BookOpenIcon className="h-8 w-8 text-blue-500" />
               <div className="ml-4">
-                <div className="text-2xl font-bold text-gray-900">{subjects.length}</div>
+                <div className="text-2xl font-bold text-gray-900">{dashboardStats.totalClasses}</div>
                 <div className="text-sm text-gray-600">Classes Created</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="flex items-center">
+              <UserGroupIcon className="h-8 w-8 text-green-500" />
+              <div className="ml-4">
+                <div className="text-2xl font-bold text-gray-900">{dashboardStats.totalStudents}</div>
+                <div className="text-sm text-gray-600">Total Students</div>
               </div>
             </div>
           </div>
@@ -117,20 +149,8 @@ const TeacherDashboard: React.FC = () => {
             <div className="flex items-center">
               <CalendarIcon className="h-8 w-8 text-purple-500" />
               <div className="ml-4">
-                <div className="text-2xl font-bold text-gray-900">{subjects.length}</div>
+                <div className="text-2xl font-bold text-gray-900">{dashboardStats.activeClasses}</div>
                 <div className="text-sm text-gray-600">Active Classes</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <div className="flex items-center">
-              <AcademicCapIcon className="h-8 w-8 text-orange-500" />
-              <div className="ml-4">
-                <div className="text-2xl font-bold text-gray-900">
-                  {subjects.length > 0 ? 'Ready' : 'None'}
-                </div>
-                <div className="text-sm text-gray-600">Classes Status</div>
               </div>
             </div>
           </div>
@@ -200,47 +220,68 @@ const TeacherDashboard: React.FC = () => {
             <h2 className="text-lg font-medium text-gray-900 mb-6">Your Classes</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {subjects.map((subject, index) => (
-                <Link
+                <div
                   key={subject.subject_id}
-                  to={`/class/${subject.subject_id}`}
-                  className="group"
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 group"
                 >
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
-                    {/* Class Header with Color */}
-                    <div className={`${getSubjectColor(index)} h-24 relative`}>
-                      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                      <div className="relative p-4 text-white">
-                        <h3 className="font-semibold text-lg truncate">{subject.name}</h3>
+                  {/* Class Header with Color */}
+                  <div className={`${getSubjectColor(index)} h-24 relative`}>
+                    <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                    <div className="relative p-4 text-white flex justify-between items-start">
+                      <Link
+                        to={`/class/${subject.subject_id}`}
+                        className="flex-1 min-w-0"
+                      >
+                        <h3 className="font-semibold text-lg truncate hover:text-gray-100 transition-colors">
+                          {subject.name}
+                        </h3>
                         <p className="text-sm opacity-90">{subject.subject_code}</p>
+                      </Link>
+                      
+                      {/* Settings Button */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate(`/class/${subject.subject_id}/settings`);
+                        }}
+                        className="ml-2 p-1.5 rounded-full hover:bg-white hover:bg-opacity-20 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        title="Class Settings"
+                      >
+                        <CogIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Class Info */}
+                  <Link
+                    to={`/class/${subject.subject_id}`}
+                    className="block p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-600">Teacher</span>
+                      <div className="flex items-center text-sm text-gray-500">
+                        <UserGroupIcon className="h-4 w-4 mr-1" />
+                        <span className="font-medium">
+                          {subject.student_count ?? 0} student{subject.student_count !== 1 ? 's' : ''}
+                        </span>
                       </div>
                     </div>
                     
-                    {/* Class Info */}
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">You</span>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <UserGroupIcon className="h-4 w-4 mr-1" />
-                          {subject.student_count}
-                        </div>
-                      </div>
-                      
-                      {subject.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                          {subject.description}
-                        </p>
-                      )}
-                      
-                      <div className="mb-2">
-                        <InviteCodeDisplay code={subject.invite_code} size="sm" />
-                      </div>
-                      
-                      <div className="text-xs text-gray-500">
-                        Created {new Date(subject.created_at).toLocaleDateString()}
-                      </div>
+                    {subject.description && (
+                      <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                        {subject.description}
+                      </p>
+                    )}
+                    
+                    <div className="mb-2">
+                      <InviteCodeDisplay code={subject.invite_code} size="sm" />
                     </div>
-                  </div>
-                </Link>
+                    
+                    <div className="text-xs text-gray-500">
+                      Created {new Date(subject.created_at).toLocaleDateString()}
+                    </div>
+                  </Link>
+                </div>
               ))}
             </div>
           </div>

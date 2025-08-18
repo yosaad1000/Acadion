@@ -19,6 +19,17 @@ interface AttendanceRecord {
   method: 'manual' | 'face_recognition';
   confidence_score?: number;
   created_at: string;
+  session_id?: string;
+  session_timestamp?: string;
+}
+
+interface AttendanceSession {
+  date: string;
+  sessions: {
+    session_id?: string;
+    session_timestamp: string;
+    records: AttendanceRecord[];
+  }[];
 }
 
 interface AttendanceStats {
@@ -27,6 +38,7 @@ interface AttendanceStats {
   absent_count: number;
   late_count: number;
   attendance_rate: number;
+  sessions_by_date: { [date: string]: AttendanceRecord[] };
 }
 
 const StudentAttendance: React.FC = () => {
@@ -66,18 +78,27 @@ const StudentAttendance: React.FC = () => {
 
   const fetchAttendanceData = async () => {
     try {
-      const response = await fetch(`/api/attendance/${classId}`, {
+      const response = await fetch(`/api/attendance/${classId}/sessions`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
       if (response.ok) {
         const data = await response.json();
-        const myRecords = data.filter((record: any) => record.student_id === user?.user_id);
+        const myRecords = data.sessions.filter((record: any) => record.student_id === user?.user_id);
         
         setAttendanceRecords(myRecords);
         
-        // Calculate stats
+        // Group records by date for better statistics
+        const sessionsByDate: { [date: string]: AttendanceRecord[] } = {};
+        myRecords.forEach((record: AttendanceRecord) => {
+          if (!sessionsByDate[record.date]) {
+            sessionsByDate[record.date] = [];
+          }
+          sessionsByDate[record.date].push(record);
+        });
+        
+        // Calculate stats with session awareness
         const presentCount = myRecords.filter((r: any) => r.status === 'present').length;
         const absentCount = myRecords.filter((r: any) => r.status === 'absent').length;
         const lateCount = myRecords.filter((r: any) => r.status === 'late').length;
@@ -88,7 +109,8 @@ const StudentAttendance: React.FC = () => {
           present_count: presentCount,
           absent_count: absentCount,
           late_count: lateCount,
-          attendance_rate: totalSessions > 0 ? (presentCount / totalSessions) * 100 : 0
+          attendance_rate: totalSessions > 0 ? ((presentCount + lateCount) / totalSessions) * 100 : 0,
+          sessions_by_date: sessionsByDate
         });
       }
     } catch (error) {
@@ -124,9 +146,50 @@ const StudentAttendance: React.FC = () => {
     }
   };
 
+  // Group filtered records by date and session
   const filteredRecords = attendanceRecords.filter(record => 
     record.date.startsWith(selectedMonth)
   );
+
+  const groupedRecords = filteredRecords.reduce((acc, record) => {
+    const date = record.date;
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(record);
+    return acc;
+  }, {} as { [date: string]: AttendanceRecord[] });
+
+  // Sort dates in descending order and group sessions within each date
+  const sortedDates = Object.keys(groupedRecords).sort((a, b) => 
+    new Date(b).getTime() - new Date(a).getTime()
+  );
+
+  const sessionsByDate = sortedDates.map(date => {
+    const dayRecords = groupedRecords[date];
+    
+    // Group by session
+    const sessionMap = new Map<string, AttendanceRecord[]>();
+    dayRecords.forEach(record => {
+      const sessionKey = record.session_id || `${record.date}_${record.session_timestamp || record.created_at}`;
+      if (!sessionMap.has(sessionKey)) {
+        sessionMap.set(sessionKey, []);
+      }
+      sessionMap.get(sessionKey)!.push(record);
+    });
+
+    const sessions = Array.from(sessionMap.entries()).map(([sessionKey, records]) => ({
+      sessionKey,
+      session_id: records[0]?.session_id,
+      session_timestamp: records[0]?.session_timestamp || records[0]?.created_at,
+      records: records.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    })).sort((a, b) => new Date(a.session_timestamp).getTime() - new Date(b.session_timestamp).getTime());
+
+    return {
+      date,
+      sessions
+    };
+  });
 
   if (loading) {
     return (
@@ -195,7 +258,7 @@ const StudentAttendance: React.FC = () => {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <div className="flex items-center">
               <CalendarIcon className="h-8 w-8 text-blue-500" />
@@ -212,6 +275,16 @@ const StudentAttendance: React.FC = () => {
               <div className="ml-4">
                 <div className="text-2xl font-bold text-gray-900">{stats?.present_count || 0}</div>
                 <div className="text-sm text-gray-600">Present</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="flex items-center">
+              <ClockIcon className="h-8 w-8 text-yellow-500" />
+              <div className="ml-4">
+                <div className="text-2xl font-bold text-gray-900">{stats?.late_count || 0}</div>
+                <div className="text-sm text-gray-600">Late</div>
               </div>
             </div>
           </div>
@@ -277,45 +350,75 @@ const StudentAttendance: React.FC = () => {
           </div>
           
           <div className="divide-y divide-gray-200">
-            {filteredRecords.length > 0 ? (
-              filteredRecords
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((record) => (
-                  <div key={record.id} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="mr-3">
-                        {getStatusIcon(record.status)}
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {new Date(record.date).toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {record.method === 'face_recognition' ? (
-                            <span className="flex items-center">
-                              <CameraIcon className="h-4 w-4 mr-1" />
-                              Face Recognition
-                              {record.confidence_score && (
-                                <span className="ml-2">({(record.confidence_score * 100).toFixed(1)}% confidence)</span>
-                              )}
-                            </span>
-                          ) : (
-                            'Manual Entry'
-                          )} • {new Date(record.created_at).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
-                      {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+            {sessionsByDate.length > 0 ? (
+              sessionsByDate.map((dayData) => (
+                <div key={dayData.date} className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-medium text-gray-900">
+                      {new Date(dayData.date).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </h4>
+                    <span className="text-sm text-gray-500">
+                      {dayData.sessions.length} session{dayData.sessions.length !== 1 ? 's' : ''}
                     </span>
                   </div>
-                ))
+                  
+                  <div className="space-y-3">
+                    {dayData.sessions.map((session, sessionIndex) => (
+                      <div key={session.sessionKey} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center">
+                            <ClockIcon className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="text-sm font-medium text-gray-900">
+                              Session {sessionIndex + 1} - {new Date(session.session_timestamp).toLocaleTimeString()}
+                            </span>
+                            {session.session_id && (
+                              <span className="ml-2 px-2 py-1 bg-white text-gray-600 text-xs rounded border">
+                                {session.session_id.slice(0, 8)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {session.records.map((record) => (
+                            <div key={record.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                              <div className="flex items-center">
+                                <div className="mr-3">
+                                  {getStatusIcon(record.status)}
+                                </div>
+                                <div>
+                                  <div className="text-sm text-gray-500">
+                                    {record.method === 'face_recognition' ? (
+                                      <span className="flex items-center">
+                                        <CameraIcon className="h-4 w-4 mr-1" />
+                                        Face Recognition
+                                        {record.confidence_score && (
+                                          <span className="ml-2">({(record.confidence_score * 100).toFixed(1)}% confidence)</span>
+                                        )}
+                                      </span>
+                                    ) : (
+                                      'Manual Entry'
+                                    )} • {new Date(record.created_at).toLocaleTimeString()}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(record.status)}`}>
+                                {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
             ) : (
               <div className="p-8 text-center text-gray-500">
                 <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />

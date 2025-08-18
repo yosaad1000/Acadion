@@ -1,6 +1,14 @@
 # Use the face recognition base image
 FROM animcogn/face_recognition
 
+# Fix outdated Debian repositories
+RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
+    sed -i 's/security.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
+    sed -i '/stretch-updates/d' /etc/apt/sources.list
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 

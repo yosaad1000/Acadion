@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List
-from app.models.subject import SubjectCreate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse
+from app.models.subject import SubjectCreate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse, SubjectUpdateRequest, EnrolledStudent
 from app.models.user import UserResponse
 from app.routers.auth import get_current_user
 from app.services.local_supabase import LocalSupabase
@@ -182,6 +182,135 @@ async def get_subject(
     except Exception as e:
         logger.error(f"Get subject error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get subject")
+
+@router.delete("/{subject_id}/enrollment")
+async def unenroll_from_subject(
+    subject_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Unenroll current user from a subject (Students only)"""
+    try:
+        if current_user.user_type != "student":
+            raise HTTPException(status_code=403, detail="Only students can unenroll from subjects")
+        
+        # Verify subject exists
+        subject = await db.get_subject_by_id(subject_id)
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        
+        # Verify student is enrolled
+        is_enrolled = await db.is_student_enrolled(subject_id, current_user.user_id)
+        if not is_enrolled:
+            raise HTTPException(status_code=400, detail="You are not enrolled in this subject")
+        
+        # Unenroll the student
+        success = await db.unenroll_student(subject_id, current_user.user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to unenroll from subject")
+        
+        return {"message": "Successfully unenrolled from subject"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unenroll from subject error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to unenroll from subject")
+
+@router.put("/{subject_id}", response_model=SubjectResponse)
+async def update_subject(
+    subject_id: str,
+    subject_update: SubjectUpdateRequest,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Update subject information (Teachers only)"""
+    try:
+        if current_user.user_type != "teacher":
+            raise HTTPException(status_code=403, detail="Only teachers can update subjects")
+        
+        # Verify subject exists and teacher owns it
+        subject = await db.get_subject_by_id(subject_id)
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        
+        if subject["teacher_id"] != current_user.user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Prepare update data
+        update_data = {}
+        if subject_update.name is not None:
+            update_data["name"] = subject_update.name
+        if subject_update.description is not None:
+            update_data["description"] = subject_update.description
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        # Update subject
+        success = await db.update_subject_info(subject_id, update_data, current_user.user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update subject")
+        
+        # Return updated subject
+        updated_subject = await db.get_subject_by_id(subject_id)
+        return SubjectResponse(
+            subject_id=updated_subject["subject_id"],
+            subject_code=updated_subject.get("subject_code", ""),
+            name=updated_subject["name"],
+            description=updated_subject.get("description"),
+            teacher_id=updated_subject["teacher_id"],
+            teacher_name=updated_subject["teacher_name"],
+            invite_code=updated_subject.get("invite_code", ""),
+            is_active=updated_subject["is_active"],
+            student_count=updated_subject.get("student_count", 0),
+            created_at=updated_subject["created_at"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update subject error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update subject")
+
+@router.delete("/{subject_id}/students/{student_id}")
+async def remove_student_from_class(
+    subject_id: str,
+    student_id: str,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Remove a student from the class (Teachers only)"""
+    try:
+        if current_user.user_type != "teacher":
+            raise HTTPException(status_code=403, detail="Only teachers can remove students from classes")
+        
+        # Verify subject exists and teacher owns it
+        subject = await db.get_subject_by_id(subject_id)
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        
+        if subject["teacher_id"] != current_user.user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Verify student exists and is enrolled
+        student = await db.get_user_by_id(student_id)
+        if not student:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        is_enrolled = await db.is_student_enrolled(subject_id, student_id)
+        if not is_enrolled:
+            raise HTTPException(status_code=400, detail="Student is not enrolled in this subject")
+        
+        # Remove student from subject
+        success = await db.remove_student_from_subject(subject_id, student_id, current_user.user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to remove student from subject")
+        
+        return {"message": f"Successfully removed student from subject"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Remove student from class error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to remove student from class")
 
 @router.delete("/{subject_id}")
 async def delete_subject(

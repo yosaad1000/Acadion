@@ -28,3 +28,20 @@ class UserResponse(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     is_face_registered: Optional[bool] = None
+
+class ProfileUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class ProfileResponse(BaseModel):
+    user_id: str
+    email: str
+    name: str
+    user_type: UserType
+    is_face_registered: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
