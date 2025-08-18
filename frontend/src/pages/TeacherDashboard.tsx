@@ -30,18 +30,10 @@ const TeacherDashboard: React.FC = () => {
   
   // Use optimized API hook with caching
   const { data: subjects = [], loading, error, refetch } = useSubjects();
-
+  console.log(subjects); 
+  console.log("Subjects loaded:", subjects.length);
   // Memoized calculations for better performance
   const dashboardStats = useMemo(() => {
-    // Add null/undefined check before performing calculations
-    if (!subjects || !Array.isArray(subjects)) {
-      return {
-        totalClasses: 0,
-        totalStudents: 0,
-        activeClasses: 0
-      };
-    }
-
     const endTimer = performanceMonitor.startTimer('teacher_dashboard_stats');
     
     const totalStudents = subjects.reduce((total, subject) => total + (subject.student_count ?? 0), 0);
@@ -70,6 +62,8 @@ const TeacherDashboard: React.FC = () => {
     ];
     return colors[index % colors.length];
   };
+
+
 
   if (loading) {
     return (
