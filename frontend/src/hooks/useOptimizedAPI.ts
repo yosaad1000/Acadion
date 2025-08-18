@@ -40,46 +40,51 @@ export function useOptimizedAPI<T>(
   const mountedRef = useRef(true);
 
   const fetchData = useCallback(async () => {
-  if (!enabled) return;
+    if (!enabled) return;
 
-  // Cancel previous request if it exists
-  if (abortControllerRef.current) {
-    abortControllerRef.current.abort();
-  }
-
-  abortControllerRef.current = new AbortController();
-
-  setState(prev => ({ ...prev, loading: true, error: null }));
-
-  try {
-    // Get auth token from localStorage
-    const token = localStorage.getItem("token");
-
-    // Fetch data with optimizedFetch
-    const data = await optimizedFetch(
-      url,
-      { 
-        signal: abortControllerRef.current.signal,
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      },
-      cacheKey,
-      cacheTTL
-    );
-
-    // Only update state if component is still mounted
-    if (mountedRef.current) {
-      setState({ data, loading: false, error: null });
+    // Cancel previous request if it exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
-  } catch (error: any) {
-    if (error.name !== "AbortError" && mountedRef.current) {
-      const errorMessage = error.message || "An error occurred";
-      setState(prev => ({ ...prev, loading: false, error: errorMessage }));
+
+    abortControllerRef.current = new AbortController();
+
+    setState(prev => ({ ...prev, loading: true, error: null }));
+
+    try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem("token");
+
+      // Check if token exists
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      // Fetch data with optimizedFetch
+      const data = await optimizedFetch(
+        url,
+        { 
+          signal: abortControllerRef.current.signal,
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        },
+        cacheKey,
+        cacheTTL
+      );
+
+      // Only update state if component is still mounted
+      if (mountedRef.current) {
+        setState({ data, loading: false, error: null });
+      }
+    } catch (error: any) {
+      if (error.name !== "AbortError" && mountedRef.current) {
+        const errorMessage = error.message || "An error occurred";
+        setState(prev => ({ ...prev, loading: false, error: errorMessage }));
+      }
     }
-  }
-}, [url, enabled, cacheKey, cacheTTL]);
+  }, [url, enabled, cacheKey, cacheTTL]);
 
   // Debounced fetch function
   const debouncedFetch = useCallback(
@@ -144,11 +149,17 @@ export function useDashboardData(classId: string) {
 
 // Specialized hook for subjects with student counts
 export function useSubjects() {
-  return useOptimizedAPI('/api/subjects', {
+  const result = useOptimizedAPI<any[]>('/api/subjects', {
     cacheKey: 'user_subjects',
     cacheTTL: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true
   });
+
+  // Return empty array as fallback when data is null
+  return {
+    ...result,
+    data: result.data || []
+  };
 }
 
 // Specialized hook for class students
