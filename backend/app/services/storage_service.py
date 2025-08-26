@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime
 from pinecone import Pinecone, ServerlessSpec
 
-from config import config
+from app.config import settings as config
 from services.database_interface import DatabaseInterface
 from services.supabase_adapter import SupabaseAdapter
 
@@ -20,33 +20,50 @@ class StorageService:
         self.db = db_adapter or SupabaseAdapter()
         
         # Initialize Pinecone for face recognition
+        if not config.PINECONE_API_KEY:
+            raise ValueError("PINECONE_API_KEY is required but not set")
+        
+        logger.info(f"Initializing Pinecone with API key: {config.PINECONE_API_KEY[:10]}...")
         self.pc = Pinecone(api_key=config.PINECONE_API_KEY)
         
         # Create index if it doesn't exist
-        if config.PINECONE_INDEX_NAME not in self.pc.list_indexes().names():
+        existing_indexes = [index.name for index in self.pc.list_indexes()]
+        if config.PINECONE_INDEX_NAME not in existing_indexes:
+            logger.info(f"Creating Pinecone index: {config.PINECONE_INDEX_NAME}")
             self.pc.create_index(
                 name=config.PINECONE_INDEX_NAME,
                 dimension=config.FACE_ENCODING_DIMENSION,
                 metric=config.FACE_METRIC,
                 spec=ServerlessSpec(
-                    cloud=config.PINECONE_ENV,
+                    cloud="aws",  # Use aws as default cloud
                     region=config.PINECONE_REGION
                 )
             )
+            logger.info(f"Index {config.PINECONE_INDEX_NAME} created successfully")
+        else:
+            logger.info(f"Using existing Pinecone index: {config.PINECONE_INDEX_NAME}")
         
         self.face_index = self.pc.Index(config.PINECONE_INDEX_NAME)
     
     # Face recognition methods (Pinecone operations)
     def store_student_face(self, student_id, name, face_encoding):
         """Store student face encoding in Pinecone"""
-        self.face_index.upsert(vectors=[{
-            "id": student_id,
-            "values": face_encoding.tolist(),
-            "metadata": {
-                "name": name,
-                "student_id": student_id
-            }
-        }])
+        try:
+            logger.info(f"Storing face encoding for student {student_id} ({name})")
+            logger.info(f"Face encoding shape: {face_encoding.shape}, dimension: {len(face_encoding)}")
+            
+            self.face_index.upsert(vectors=[{
+                "id": student_id,
+                "values": face_encoding.tolist(),
+                "metadata": {
+                    "name": name,
+                    "student_id": student_id
+                }
+            }])
+            logger.info(f"Successfully stored face encoding for {student_id}")
+        except Exception as e:
+            logger.error(f"Error storing face encoding for {student_id}: {e}")
+            raise
     
     def find_matching_face(self, face_encoding):
         """Find a matching face in Pinecone"""

@@ -502,3 +502,69 @@ class LocalSupabase:
         except Exception as e:
             logger.error(f"Error getting attendance by date: {e}")
             return []
+    
+    async def get_attendance_sessions(self, subject_id: str, attendance_date: date = None) -> List[Dict[str, Any]]:
+        """Get unique attendance sessions for a subject on a specific date"""
+        try:
+            async with httpx.AsyncClient() as client:
+                params = {
+                    "subject_id": f"eq.{subject_id}",
+                    "select": "session_id,session_name,session_time,date"
+                }
+                if attendance_date:
+                    params["date"] = f"eq.{attendance_date}"
+                
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/attendance",
+                    headers=self.headers,
+                    params=params
+                )
+                if response.status_code == 200:
+                    records = response.json()
+                    # Get unique sessions
+                    sessions = {}
+                    for record in records:
+                        session_key = f"{record['date']}_{record['session_id']}"
+                        if session_key not in sessions:
+                            sessions[session_key] = {
+                                "session_id": record["session_id"],
+                                "session_name": record["session_name"],
+                                "session_time": record["session_time"],
+                                "date": record["date"],
+                                "student_count": 0
+                            }
+                        sessions[session_key]["student_count"] += 1
+                    
+                    return list(sessions.values())
+                return []
+        except Exception as e:
+            logger.error(f"Error getting attendance sessions: {e}")
+            return []
+    
+    async def get_attendance_by_session(self, subject_id: str, session_id: str, attendance_date: date = None) -> List[Dict[str, Any]]:
+        """Get attendance records for a specific session"""
+        try:
+            async with httpx.AsyncClient() as client:
+                params = {
+                    "subject_id": f"eq.{subject_id}",
+                    "session_id": f"eq.{session_id}",
+                    "select": "*,student:users!student_id(name),subject:subjects!subject_id(name)"
+                }
+                if attendance_date:
+                    params["date"] = f"eq.{attendance_date}"
+                
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/attendance",
+                    headers=self.headers,
+                    params=params
+                )
+                if response.status_code == 200:
+                    records = response.json()
+                    for record in records:
+                        record["student_name"] = record.get("student", {}).get("name", "")
+                        record["subject_name"] = record.get("subject", {}).get("name", "")
+                    return records
+                return []
+        except Exception as e:
+            logger.error(f"Error getting attendance by session: {e}")
+            return []

@@ -16,8 +16,12 @@ class Settings(BaseSettings):
     # Face Recognition
     PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")
     PINECONE_ENVIRONMENT: str = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
-    PINECONE_INDEX_NAME: str = os.getenv("PINECONE_INDEX_NAME", "student-faces")
-    FACE_THRESHOLD: float = 0.6
+    PINECONE_ENV: str = os.getenv("PINECONE_ENVIRONMENT", "aws")  # Cloud provider
+    PINECONE_REGION: str = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")  # Region
+    PINECONE_INDEX_NAME: str = os.getenv("PINECONE_INDEX_NAME", "student-face-encodings")
+    FACE_THRESHOLD: float = float(os.getenv("FACE_THRESHOLD", "0.6"))
+    FACE_ENCODING_DIMENSION: int = 128
+    FACE_METRIC: str = "euclidean"
     
     # External Services
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
