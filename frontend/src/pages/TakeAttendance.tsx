@@ -304,13 +304,21 @@ const TakeAttendance: React.FC = () => {
   };
 
   const saveAttendance = async () => {
+    // VERY OBVIOUS DEBUG - This should always show
+    alert('🚨 SAVE ATTENDANCE FUNCTION CALLED! Check console now.');
+    
     setSaving(true);
     try {
+      // DEBUG: Show initial state
+      console.log('🔍 INITIAL ATTENDANCE STATE:', attendance);
+      console.log('🔍 STUDENTS LIST:', students.map(s => ({id: s.user_id, name: s.name})));
+      
       // Ensure all students have an attendance status (default to absent if not set)
       const completeAttendance = { ...attendance };
       students.forEach(student => {
-        if (!completeAttendance[student.user_id] || completeAttendance[student.user_id].status === 'absent') {
-          // Keep existing absent status or set to absent if not defined
+        if (!completeAttendance[student.user_id]) {
+          console.log(`🔍 Setting ${student.user_id} to absent (no existing record)`);
+          // Only set to absent if no attendance record exists
           completeAttendance[student.user_id] = {
             student_id: student.user_id,
             status: 'absent',
@@ -319,31 +327,69 @@ const TakeAttendance: React.FC = () => {
             session_name: currentSession.session_name,
             session_time: currentSession.session_time
           };
+        } else {
+          console.log(`🔍 Student ${student.user_id} already has status: ${completeAttendance[student.user_id].status}`);
         }
       });
+      
+      console.log('🔍 COMPLETE ATTENDANCE AFTER PROCESSING:', completeAttendance);
 
       // Save ALL attendance records (present, absent, late)
       const attendanceRecords = Object.values(completeAttendance);
+      
+      console.log('🔍 FRONTEND DEBUG: About to save attendance records:');
+      console.log(`Total records: ${attendanceRecords.length}`);
+      attendanceRecords.forEach((record, index) => {
+        console.log(`Record ${index + 1}: Student ${record.student_id} - Status: ${record.status}`);
+      });
+      
+      // DEBUG: Show what we're about to save
+      const statusBreakdown = attendanceRecords.reduce((acc, record) => {
+        acc[record.status] = (acc[record.status] || 0) + 1;
+        return acc;
+      }, {});
+      
+      // DEBUG: Show detailed breakdown
+      const debugInfo = attendanceRecords.map(r => `${r.student_id.slice(-4)}: ${r.status}`).join('\n');
+      alert(`About to save ${attendanceRecords.length} records:\n${JSON.stringify(statusBreakdown, null, 2)}\n\nStudents:\n${debugInfo}\n\nCheck console for details!`);
 
+      let successCount = 0;
+      let errorCount = 0;
+      
       for (const record of attendanceRecords) {
-        await fetch('/api/attendance/manual', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            student_id: record.student_id,
-            subject_id: classId,
-            date: new Date().toISOString().split('T')[0],
-            status: record.status,
-            method: record.method,
-            confidence_score: record.confidence_score,
-            session_id: record.session_id || currentSession.session_id,
-            session_name: record.session_name || currentSession.session_name,
-            session_time: record.session_time || currentSession.session_time
-          })
-        });
+        try {
+          console.log(`🔄 Saving student ${record.student_id} with status ${record.status}`);
+          
+          const response = await fetch('/api/attendance/manual', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              student_id: record.student_id,
+              subject_id: classId,
+              date: new Date().toISOString().split('T')[0],
+              status: record.status,
+              method: record.method,
+              confidence_score: record.confidence_score,
+              session_id: record.session_id || currentSession.session_id,
+              session_name: record.session_name || currentSession.session_name,
+              session_time: record.session_time || currentSession.session_time
+            })
+          });
+          
+          if (response.ok) {
+            console.log(`✅ Successfully saved ${record.student_id} as ${record.status}`);
+            successCount++;
+          } else {
+            console.error(`❌ Failed to save ${record.student_id}: ${response.status} ${response.statusText}`);
+            errorCount++;
+          }
+        } catch (error) {
+          console.error(`💥 Error saving ${record.student_id}:`, error);
+          errorCount++;
+        }
       }
 
       const totalRecords = attendanceRecords.length;
@@ -351,7 +397,11 @@ const TakeAttendance: React.FC = () => {
       const absentRecords = attendanceRecords.filter(r => r.status === 'absent').length;
       const lateRecords = attendanceRecords.filter(r => r.status === 'late').length;
       
-      alert(`Attendance saved successfully!\n${totalRecords} total records:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late`);
+      if (errorCount > 0) {
+        alert(`Attendance save completed with issues!\n${totalRecords} total records:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late\n\nResults:\n- ${successCount} saved successfully\n- ${errorCount} failed\n\nCheck console for details.`);
+      } else {
+        alert(`Attendance saved successfully!\n${totalRecords} total records:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late\n\nAll ${successCount} records saved!`);
+      }
       navigate(`/class/${classId}`);
     } catch (error) {
       alert('Error saving attendance');

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Attendance Save</title>
+</head>
+<body>
+    <h1>Test Attendance Save</h1>
+    <button onclick="testSaveAttendance()">Test Save All Statuses</button>
+    <div id="output"></div>
+
+    <script>
+        async function testSaveAttendance() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>Testing attendance save...</p>';
+            
+            // Sample students with different statuses
+            const students = [
+                {id: 'be9b9171-9f85-46a6-82df-dd80b013732e', name: 'Demo Student', status: 'present'},
+                {id: '6d62c088-ffee-4c96-93f2-6cdf6439940d', name: 'Saad Sayed', status: 'absent'},
+                {id: '0a3308d9-586a-429a-8c1c-f84a283ceeb5', name: 'Arjun Yadav', status: 'late'},
+                {id: 'bc91473b-96e7-44f5-b7e2-5ed85788411f', name: 'Satyansh Kumar', status: 'absent'},
+                {id: 'b9b5e69b-f4a1-4ff8-b2dc-e3ac194e17e6', name: 'Satyansh Kumar 2', status: 'present'}
+            ];
+            
+            // You'll need to update this with a real subject ID
+            const subjectId = 'your-subject-id-here';
+            const token = localStorage.getItem('token') || 'your-token-here';
+            
+            output.innerHTML += '<h3>Sending requests:</h3>';
+            
+            for (const student of students) {
+                const attendanceData = {
+                    student_id: student.id,
+                    subject_id: subjectId,
+                    date: new Date().toISOString().split('T')[0],
+                    status: student.status,
+                    method: 'manual',
+                    session_id: 'test_session',
+                    session_name: 'Test Session',
+                    session_time: '15:30:00'
+                };
+                
+                output.innerHTML += `<p>Saving ${student.name} as ${student.status}...</p>`;
+                console.log('Sending:', attendanceData);
+                
+                try {
+                    const response = await fetch('/api/attendance/manual', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(attendanceData)
+                    });
+                    
+                    const result = await response.text();
+                    console.log(`Response for ${student.name}:`, response.status, result);
+                    
+                    if (response.ok) {
+                        output.innerHTML += `<p style="color: green;">✅ ${student.name} saved successfully</p>`;
+                    } else {
+                        output.innerHTML += `<p style="color: red;">❌ ${student.name} failed: ${result}</p>`;
+                    }
+                } catch (error) {
+                    console.error(`Error for ${student.name}:`, error);
+                    output.innerHTML += `<p style="color: red;">💥 ${student.name} error: ${error.message}</p>`;
+                }
+            }
+            
+            output.innerHTML += '<p><strong>Check the browser console and backend logs for details!</strong></p>';
+        }
+    </script>
+</body>
+</html>

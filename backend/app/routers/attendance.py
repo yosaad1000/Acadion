@@ -340,6 +340,15 @@ async def mark_manual_attendance(
 ):
     """Manually mark attendance (Teachers only)"""
     try:
+        # DEBUG: Log all attendance requests
+        print(f"🔍 MANUAL ATTENDANCE REQUEST:")
+        print(f"   - Student ID: {attendance.student_id}")
+        print(f"   - Subject ID: {attendance.subject_id}")
+        print(f"   - Status: {attendance.status}")
+        print(f"   - Date: {attendance.date}")
+        print(f"   - Method: {attendance.method}")
+        print(f"   - Session: {attendance.session_id}")
+        
         if current_user.user_type != "teacher":
             raise HTTPException(status_code=403, detail="Only teachers can mark attendance")
         

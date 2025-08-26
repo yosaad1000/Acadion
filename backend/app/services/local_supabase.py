@@ -430,6 +430,14 @@ class LocalSupabase:
     async def mark_attendance(self, attendance_data: Dict[str, Any]) -> bool:
         """Mark attendance for a student"""
         try:
+            # DEBUG: Log what we're trying to save
+            print(f"🔍 DATABASE SAVE ATTEMPT:")
+            print(f"   - Student: {attendance_data.get('student_id')}")
+            print(f"   - Status: {attendance_data.get('status')}")
+            print(f"   - Date: {attendance_data.get('date')}")
+            print(f"   - Session: {attendance_data.get('session_id')}")
+            print(f"   - Full data: {attendance_data}")
+            
             async with httpx.AsyncClient() as client:
                 # Always try to insert new record (allow multiple per day)
                 response = await client.post(
