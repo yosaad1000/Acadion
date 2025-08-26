@@ -306,7 +306,24 @@ const TakeAttendance: React.FC = () => {
   const saveAttendance = async () => {
     setSaving(true);
     try {
-      const attendanceRecords = Object.values(attendance).filter(record => record.status === 'present');
+      // Ensure all students have an attendance status (default to absent if not set)
+      const completeAttendance = { ...attendance };
+      students.forEach(student => {
+        if (!completeAttendance[student.user_id] || completeAttendance[student.user_id].status === 'absent') {
+          // Keep existing absent status or set to absent if not defined
+          completeAttendance[student.user_id] = {
+            student_id: student.user_id,
+            status: 'absent',
+            method: 'manual',
+            session_id: currentSession.session_id,
+            session_name: currentSession.session_name,
+            session_time: currentSession.session_time
+          };
+        }
+      });
+
+      // Save ALL attendance records (present, absent, late)
+      const attendanceRecords = Object.values(completeAttendance);
 
       for (const record of attendanceRecords) {
         await fetch('/api/attendance/manual', {
@@ -329,7 +346,12 @@ const TakeAttendance: React.FC = () => {
         });
       }
 
-      alert('Attendance saved successfully!');
+      const totalRecords = attendanceRecords.length;
+      const presentRecords = attendanceRecords.filter(r => r.status === 'present').length;
+      const absentRecords = attendanceRecords.filter(r => r.status === 'absent').length;
+      const lateRecords = attendanceRecords.filter(r => r.status === 'late').length;
+      
+      alert(`Attendance saved successfully!\n${totalRecords} total records:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late`);
       navigate(`/class/${classId}`);
     } catch (error) {
       alert('Error saving attendance');
@@ -339,7 +361,8 @@ const TakeAttendance: React.FC = () => {
   };
 
   const presentCount = Object.values(attendance).filter(a => a.status === 'present').length;
-  const absentCount = students.length - presentCount;
+  const absentCount = Object.values(attendance).filter(a => a.status === 'absent').length;
+  const lateCount = Object.values(attendance).filter(a => a.status === 'late').length;
 
   if (loading) {
     return (
@@ -373,7 +396,8 @@ const TakeAttendance: React.FC = () => {
             <div className="flex items-center space-x-3">
               <div className="text-sm text-gray-600">
                 Present: <span className="font-semibold text-green-600">{presentCount}</span> •
-                Absent: <span className="font-semibold text-red-600">{absentCount}</span>
+                Absent: <span className="font-semibold text-red-600">{absentCount}</span> •
+                Late: <span className="font-semibold text-yellow-600">{lateCount}</span>
               </div>
               <button
                 onClick={saveAttendance}
