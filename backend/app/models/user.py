@@ -7,21 +7,31 @@ class UserType(str, Enum):
     TEACHER = "teacher"
     STUDENT = "student"
 
+class AuthProvider(str, Enum):
+    EMAIL = "email"
+    GOOGLE = "google"
+
 class UserCreate(BaseModel):
     email: EmailStr
     name: str
-    password: str
+    password: Optional[str] = None  # Optional for OAuth users
     user_type: UserType
+    auth_provider: AuthProvider = AuthProvider.EMAIL
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class GoogleAuthRequest(BaseModel):
+    code: str
+    user_type: UserType
 
 class UserResponse(BaseModel):
     user_id: str
     email: str
     name: str
     user_type: UserType
+    auth_provider: AuthProvider
     is_face_registered: bool
     created_at: datetime
 

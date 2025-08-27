@@ -31,15 +31,9 @@ const StudentDashboard: React.FC = () => {
 
   const fetchEnrolledSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(data);
-      }
+      const { getSubjects } = await import('../lib/api');
+      const data = await getSubjects();
+      setSubjects(data);
     } catch (error) {
       console.error('Error fetching subjects:', error);
     } finally {

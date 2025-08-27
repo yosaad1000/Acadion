@@ -5,8 +5,9 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.config import settings
-from app.models.user import UserCreate, UserLogin, UserResponse
+from app.models.user import UserCreate, UserLogin, UserResponse, GoogleAuthRequest, AuthProvider
 from app.services.local_supabase import LocalSupabase
+from app.services.google_oauth import google_oauth_service
 import logging
 import uuid
 
@@ -78,6 +79,7 @@ async def register(user: UserCreate):
             "email": user.email,
             "name": user.name,
             "user_type": user.user_type.value,
+            "auth_provider": user.auth_provider.value,
             "password_hash": hashed_password,
             "is_face_registered": False
         }
@@ -99,6 +101,7 @@ async def register(user: UserCreate):
             email=user.email,
             name=user.name,
             user_type=user.user_type,
+            auth_provider=user.auth_provider,
             is_face_registered=False,
             created_at=datetime.now()
         )
@@ -140,6 +143,7 @@ async def login(user: UserLogin):
             email=user_data["email"],
             name=user_data["name"],
             user_type=user_data["user_type"],
+            auth_provider=user_data.get("auth_provider", "email"),
             is_face_registered=user_data.get("is_face_registered", False),
             created_at=datetime.fromisoformat(user_data["created_at"].replace('Z', '+00:00')) if user_data.get("created_at") else datetime.now()
         )
@@ -165,6 +169,88 @@ async def get_current_user_info(current_user: UserResponse = Depends(get_current
 async def logout():
     """Logout user"""
     return {"message": "Successfully logged out"}
+
+@router.get("/google/url")
+async def get_google_auth_url():
+    """Get Google OAuth authorization URL"""
+    try:
+        auth_url = google_oauth_service.get_authorization_url()
+        return {"auth_url": auth_url}
+    except Exception as e:
+        logger.error(f"Error generating Google auth URL: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate auth URL")
+
+@router.post("/google/callback", response_model=Token)
+async def google_callback(auth_request: GoogleAuthRequest):
+    """Handle Google OAuth callback"""
+    try:
+        # Exchange code for token
+        token_data = await google_oauth_service.exchange_code_for_token(auth_request.code)
+        if not token_data:
+            raise HTTPException(status_code=400, detail="Failed to exchange code for token")
+        
+        # Get user info from Google
+        user_info = await google_oauth_service.get_user_info(token_data["access_token"])
+        if not user_info:
+            raise HTTPException(status_code=400, detail="Failed to get user info from Google")
+        
+        # Check if user already exists
+        existing_user = await db.get_user_by_email(user_info["email"])
+        
+        if existing_user:
+            # User exists, log them in
+            if existing_user.get("auth_provider") != "google":
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Email already registered with password. Please use email/password login."
+                )
+            
+            user_data = existing_user
+        else:
+            # Create new user
+            user_data = {
+                "user_id": str(uuid.uuid4()),
+                "email": user_info["email"],
+                "name": user_info["name"],
+                "user_type": auth_request.user_type.value,
+                "auth_provider": "google",
+                "google_id": user_info["id"],
+                "password_hash": None,  # No password for OAuth users
+                "is_face_registered": False
+            }
+            
+            success = await db.create_user(user_data)
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to create user")
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user_data["user_id"], "user_type": user_data["user_type"]}, 
+            expires_delta=access_token_expires
+        )
+        
+        user_response = UserResponse(
+            user_id=user_data["user_id"],
+            email=user_data["email"],
+            name=user_data["name"],
+            user_type=user_data["user_type"],
+            auth_provider="google",
+            is_face_registered=user_data.get("is_face_registered", False),
+            created_at=datetime.fromisoformat(user_data["created_at"].replace('Z', '+00:00')) if user_data.get("created_at") else datetime.now()
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user_response
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Google OAuth error: {e}")
+        raise HTTPException(status_code=500, detail="Google authentication failed")
 
 @router.post("/register-face")
 async def register_face(

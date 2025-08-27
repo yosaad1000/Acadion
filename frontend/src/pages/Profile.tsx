@@ -18,22 +18,22 @@ const Profile: React.FC = () => {
     formData.append('file', file);
 
     try {
-      const response = await fetch('/api/auth/register-face', {
+      const { apiCall } = await import('../lib/api');
+      const response = await apiCall('/api/auth/register-face', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
         body: formData
       });
-
+      
       if (response.ok) {
         setMessage('Face registered successfully!');
+        // Refresh the page to update user data
+        window.location.reload();
       } else {
         const errorData = await response.json();
         setMessage(errorData.detail || 'Failed to register face');
       }
-    } catch (error) {
-      setMessage('Network error. Please try again.');
+    } catch (error: any) {
+      setMessage(error.message || 'Failed to register face');
     } finally {
       setUploading(false);
     }

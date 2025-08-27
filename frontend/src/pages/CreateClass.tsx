@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeftIcon, CheckCircleIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import InviteCodeDisplay from '../components/InviteCodeDisplay';
+import { api } from '../lib/api';
 
 const CreateClass: React.FC = () => {
   const navigate = useNavigate();
@@ -19,14 +20,7 @@ const CreateClass: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/subjects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(formData)
-      });
+      const response = await api.createSubject(formData);
 
       if (response.ok) {
         const newClass = await response.json();

@@ -26,8 +26,11 @@ class Settings(BaseSettings):
     # External Services
     STRIPE_SECRET_KEY: str = os.getenv("STRIPE_SECRET_KEY", "")
     SENDGRID_API_KEY: str = os.getenv("SENDGRID_API_KEY", "")
+    
+    # Google OAuth
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    GOOGLE_REDIRECT_URI: str = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:3000/auth/google/callback")
     
     # File Upload
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB

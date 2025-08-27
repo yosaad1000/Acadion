@@ -20,21 +20,19 @@ const Dashboard: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Debug logging
+  console.log('Dashboard - Current user:', user);
+  console.log('Dashboard - User type:', user?.user_type);
+
   useEffect(() => {
     fetchSubjects();
   }, []);
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(data);
-      }
+      // For MVP, just set empty subjects array since we don't have subjects table yet
+      // TODO: Implement subjects/classes functionality with Supabase
+      setSubjects([]);
     } catch (error) {
       console.error('Error fetching subjects:', error);
     } finally {

@@ -196,6 +196,40 @@ class LocalSupabase:
             logger.error(f"Error creating user: {e}")
             return False
     
+    async def get_user_by_google_id(self, google_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by Google ID"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/users",
+                    headers=self.headers,
+                    params={"google_id": f"eq.{google_id}"}
+                )
+                if response.status_code == 200:
+                    users = response.json()
+                    return users[0] if users else None
+                return None
+        except Exception as e:
+            logger.error(f"Error getting user by Google ID: {e}")
+            return None
+    
+    async def get_user_by_auth_id(self, auth_user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by Supabase auth user ID"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/users",
+                    headers=self.headers,
+                    params={"auth_user_id": f"eq.{auth_user_id}"}
+                )
+                if response.status_code == 200:
+                    users = response.json()
+                    return users[0] if users else None
+                return None
+        except Exception as e:
+            logger.error(f"Error getting user by auth ID: {e}")
+            return None
+    
     async def update_user_face_status(self, user_id: str, is_registered: bool) -> bool:
         """Update user's face registration status"""
         try:

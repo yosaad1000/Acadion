@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
-from app.routers import auth, subjects, attendance
+from app.routers import auth, subjects, attendance, supabase_auth
 
 app = FastAPI(
     title="AI-Powered Student Management Platform API",
@@ -29,6 +29,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(supabase_auth.router, prefix="/api/supabase-auth", tags=["Supabase Authentication"])
 app.include_router(subjects.router, prefix="/api/subjects", tags=["Subjects"])
 app.include_router(attendance.router, prefix="/api/attendance", tags=["Attendance"])
 

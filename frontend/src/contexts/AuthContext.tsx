@@ -1,98 +1,162 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  user_id: string;
-  email: string;
-  name: string;
-  user_type: 'teacher' | 'student';
-  is_face_registered: boolean;
-  created_at: string;
-}
+import { supabase } from '../lib/supabase';
+import type { User } from '../lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  userRoles: string[];
+  currentRole: string;
+  signUp: (email: string, password: string, name: string, userType: 'teacher' | 'student') => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: (userType: 'teacher' | 'student') => Promise<void>;
+  signOut: () => Promise<void>;
+  switchRole: (role: 'teacher' | 'student') => Promise<void>;
+  addRole: (role: 'teacher' | 'student') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRoles, setUserRoles] = useState<string[]>(['student']);
+  const [currentRole, setCurrentRole] = useState<string>('student');
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('token');
+    console.log('🔄 AuthContext initializing...');
     
-    if (token) {
-      // Verify token with backend
-      fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(response => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error('Token invalid');
-        }
-      })
-      .then(userData => {
-        setUser(userData);
-      })
-      .catch(() => {
-        localStorage.removeItem('token');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-    } else {
+    // Timeout protection
+    const timeout = setTimeout(() => {
+      console.log('⏰ Auth timeout - forcing loading to false');
       setLoading(false);
-    }
+    }, 3000);
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        
+        if (session?.user) {
+          // Store the session token for API calls
+          if (session.access_token) {
+            localStorage.setItem('supabase_token', session.access_token);
+          }
+          
+          // Try to get user profile, but don't let it block
+          try {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('*')
+              .eq('auth_user_id', session.user.id)
+              .maybeSingle();
+            
+            if (userData) {
+              setUser(userData);
+              setCurrentRole(userData.active_role || 'student');
+              setUserRoles([userData.active_role || 'student']);
+            }
+          } catch (error) {
+            console.warn('Could not fetch user profile:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Auth init error:', error);
+      } finally {
+        clearTimeout(timeout);
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth changed:', event);
+      setSession(session);
+      
+      if (session?.access_token) {
+        localStorage.setItem('supabase_token', session.access_token);
+      } else {
+        localStorage.removeItem('supabase_token');
+      }
+      
+      if (!session) {
+        setUser(null);
+        setUserRoles(['student']);
+        setCurrentRole('student');
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  const signUp = async (email: string, password: string, name: string, userType: 'teacher' | 'student') => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name, user_type: userType } }
+    });
+    if (error) throw error;
+  };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Login failed');
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
+  const signInWithGoogle = async (userType: 'teacher' | 'student') => {
+    localStorage.setItem('oauth_user_type', userType);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?user_type=${userType}`,
       }
+    });
+    if (error) throw error;
+  };
 
-      const data = await response.json();
-      
-      // Store token
-      localStorage.setItem('token', data.access_token);
-      setUser(data.user);
-    } catch (error) {
-      throw error;
+  const switchRole = async (role: 'teacher' | 'student') => {
+    setCurrentRole(role);
+    // Add actual role switching logic later
+  };
+
+  const addRole = async (role: 'teacher' | 'student') => {
+    if (!userRoles.includes(role)) {
+      setUserRoles([...userRoles, role]);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const signOut = async () => {
     setUser(null);
+    setSession(null);
+    setUserRoles(['student']);
+    setCurrentRole('student');
+    await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        session,
+        isAuthenticated: !!session,
         loading,
-        login,
-        logout,
+        userRoles,
+        currentRole,
+        signUp,
+        signIn,
+        signInWithGoogle,
+        signOut,
+        switchRole,
+        addRole,
       }}
     >
       {children}

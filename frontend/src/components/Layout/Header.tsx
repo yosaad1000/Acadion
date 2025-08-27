@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import RoleSwitcher from '../RoleSwitcher';
 import { 
   Bars3Icon, 
   PlusIcon, 
@@ -9,13 +10,19 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Header: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut, currentRole } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force navigation even if logout fails
+      navigate('/login');
+    }
   };
 
   return (
@@ -40,8 +47,11 @@ const Header: React.FC = () => {
 
           {/* Right side */}
           <div className="flex items-center space-x-4">
+            {/* Role Switcher */}
+            <RoleSwitcher />
+            
             {/* Create/Join Button */}
-            {user?.user_type === 'teacher' ? (
+            {currentRole === 'teacher' ? (
               <Link
                 to="/create-class"
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -78,7 +88,7 @@ const Header: React.FC = () => {
                     <div className="text-sm font-medium text-gray-900">{user?.name}</div>
                     <div className="text-xs text-gray-500">{user?.email}</div>
                     <div className="text-xs text-blue-600 capitalize mt-1">
-                      {user?.user_type}
+                      {currentRole}
                     </div>
                   </div>
                   

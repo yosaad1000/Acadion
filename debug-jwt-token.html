@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JWT Token Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .token-part { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .header { background: #e3f2fd; }
+        .payload { background: #f3e5f5; }
+        .signature { background: #e8f5e8; }
+        pre { white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <h1>JWT Token Debug</h1>
+    <div id="results"></div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        const supabaseUrl = 'https://scijpejtvneuqbhkoxuz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjaWpwZWp0dm5ldXFiaGtveHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1OTcxNDEsImV4cCI6MjA3MTE3MzE0MX0.Z6Q_DmsuHYOOvCGed5hcKDrT93XPL5hHwCyGDREcmmw';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        function decodeJWT(token) {
+            try {
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    return { error: 'Invalid JWT format' };
+                }
+
+                const header = JSON.parse(atob(parts[0]));
+                const payload = JSON.parse(atob(parts[1]));
+                
+                return {
+                    header,
+                    payload,
+                    signature: parts[2]
+                };
+            } catch (error) {
+                return { error: error.message };
+            }
+        }
+
+        async function debugToken() {
+            const results = document.getElementById('results');
+            
+            function addResult(title, content, className = '') {
+                const div = document.createElement('div');
+                div.className = `token-part ${className}`;
+                div.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+                results.appendChild(div);
+            }
+
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    addResult('Session Error', error.message, 'error');
+                    return;
+                }
+
+                if (!session) {
+                    addResult('No Session', 'Please log in first', 'error');
+                    return;
+                }
+
+                addResult('Session Info', `
+User ID: ${session.user.id}
+Email: ${session.user.email}
+Expires At: ${new Date(session.expires_at * 1000).toLocaleString()}
+                `, 'header');
+
+                // Decode the access token
+                const decoded = decodeJWT(session.access_token);
+                
+                if (decoded.error) {
+                    addResult('JWT Decode Error', decoded.error, 'error');
+                    return;
+                }
+
+                addResult('JWT Header', JSON.stringify(decoded.header, null, 2), 'header');
+                addResult('JWT Payload', JSON.stringify(decoded.payload, null, 2), 'payload');
+                addResult('JWT Signature', decoded.signature, 'signature');
+
+                // Test the backend auth
+                addResult('Testing Backend Auth...', 'Making API call to backend...', 'header');
+                
+                try {
+                    const response = await fetch('http://localhost:8000/api/subjects', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${session.access_token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const responseText = await response.text();
+                    
+                    if (response.ok) {
+                        addResult('Backend Response (Success)', `
+Status: ${response.status}
+Response: ${responseText}
+                        `, 'header');
+                    } else {
+                        addResult('Backend Response (Error)', `
+Status: ${response.status}
+Response: ${responseText}
+                        `, 'error');
+                    }
+                } catch (fetchError) {
+                    addResult('Backend Fetch Error', fetchError.message, 'error');
+                }
+
+            } catch (error) {
+                addResult('General Error', error.message, 'error');
+            }
+        }
+
+        // Run debug when page loads
+        debugToken();
+    </script>
+</body>
+</html>

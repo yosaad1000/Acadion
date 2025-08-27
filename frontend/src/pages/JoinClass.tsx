@@ -14,24 +14,15 @@ const JoinClass: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/subjects/join', {
+      const { apiCallJson } = await import('../lib/api');
+      const enrollment = await apiCallJson('/api/subjects/join', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
         body: JSON.stringify({ invite_code: inviteCode.trim().toUpperCase() })
       });
-
-      if (response.ok) {
-        const enrollment = await response.json();
-        navigate(`/class/${enrollment.subject_id}`);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Failed to join class');
-      }
-    } catch (error) {
-      setError('Network error. Please try again.');
+      
+      navigate(`/class/${enrollment.subject_id}`);
+    } catch (error: any) {
+      setError(error.message || 'Failed to join class');
     } finally {
       setLoading(false);
     }

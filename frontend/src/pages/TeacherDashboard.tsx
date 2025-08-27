@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import InviteCodeDisplay from '../components/InviteCodeDisplay';
+import { api } from '../lib/api';
 import { 
   PlusIcon, 
   BookOpenIcon, 
@@ -33,11 +34,7 @@ const TeacherDashboard: React.FC = () => {
 
   const fetchTeachingSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.getSubjects();
       if (response.ok) {
         const data = await response.json();
         setSubjects(data);

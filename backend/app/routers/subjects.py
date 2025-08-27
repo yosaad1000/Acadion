@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List
 from app.models.subject import SubjectCreate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse
 from app.models.user import UserResponse
-from app.routers.auth import get_current_user
+from app.middleware.supabase_auth import get_current_user_supabase as get_current_user
 from app.services.local_supabase import LocalSupabase
 import logging
 
