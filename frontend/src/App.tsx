@@ -15,6 +15,7 @@ import AttendanceDashboard from './pages/AttendanceDashboard';
 import StudentAttendance from './pages/StudentAttendance';
 import ViewStudents from './pages/ViewStudents';
 import Profile from './pages/Profile';
+import FaceRegistration from './pages/FaceRegistration';
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -103,6 +104,7 @@ const AppRoutes: React.FC = () => {
         <Route path="student-attendance/:classId" element={<StudentAttendance />} />
         <Route path="students" element={<ViewStudents />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="register-face" element={<FaceRegistration />} />
         <Route path="" element={<Navigate to="/dashboard" />} />
       </Route>
     </Routes>

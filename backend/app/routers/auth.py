@@ -8,6 +8,7 @@ from app.config import settings
 from app.models.user import UserCreate, UserLogin, UserResponse, GoogleAuthRequest, AuthProvider
 from app.services.local_supabase import LocalSupabase
 from app.services.google_oauth import google_oauth_service
+from app.middleware.supabase_auth import get_current_user_supabase
 import logging
 import uuid
 
@@ -161,7 +162,7 @@ async def login(user: UserLogin):
         raise HTTPException(status_code=500, detail="Login failed")
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: UserResponse = Depends(get_current_user)):
+async def get_current_user_info(current_user: UserResponse = Depends(get_current_user_supabase)):
     """Get current user information"""
     return current_user
 
@@ -255,7 +256,7 @@ async def google_callback(auth_request: GoogleAuthRequest):
 @router.post("/register-face")
 async def register_face(
     file: UploadFile = File(...),
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user_supabase)
 ):
     """Register face for student (first-time setup)"""
     try:

@@ -7,7 +7,8 @@ import {
   CalendarIcon,
   UserGroupIcon,
   ClockIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  CameraIcon
 } from '@heroicons/react/24/outline';
 
 interface EnrolledSubject {
@@ -128,22 +129,27 @@ const StudentDashboard: React.FC = () => {
 
         {/* Face Registration Alert */}
         {!user?.is_face_registered && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
-            <div className="flex items-center">
-              <ClockIcon className="h-5 w-5 text-yellow-600 mr-2" />
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-yellow-800">
-                  Face Registration Required
-                </h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Register your face for automatic attendance tracking.
-                </p>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                  <CameraIcon className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-blue-900">
+                    Complete Your Setup
+                  </h3>
+                  <p className="text-blue-700 mt-1">
+                    Register your face for automatic attendance tracking in all your classes.
+                  </p>
+                </div>
               </div>
               <Link
-                to="/profile"
-                className="text-sm font-medium text-yellow-800 hover:text-yellow-900"
+                to="/register-face"
+                className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm"
               >
-                Register Now →
+                <CameraIcon className="h-5 w-5 mr-2" />
+                Register Face
               </Link>
             </div>
           </div>

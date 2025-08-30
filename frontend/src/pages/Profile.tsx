@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CameraIcon, UserIcon } from '@heroicons/react/24/outline';
 
@@ -93,23 +94,35 @@ const Profile: React.FC = () => {
                 </div>
                 
                 {!user?.is_face_registered && (
-                  <div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFaceRegistration}
-                      className="hidden"
-                      id="face-upload"
-                      disabled={uploading}
-                    />
-                    <label
-                      htmlFor="face-upload"
-                      className={`cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                        uploading ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                  <div className="space-y-3">
+                    <Link
+                      to="/register-face"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
-                      {uploading ? 'Uploading...' : 'Upload Photo'}
-                    </label>
+                      <CameraIcon className="h-4 w-4 mr-2" />
+                      Register Face
+                    </Link>
+                    <div className="text-xs text-gray-500">
+                      Or upload directly:
+                    </div>
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFaceRegistration}
+                        className="hidden"
+                        id="face-upload"
+                        disabled={uploading}
+                      />
+                      <label
+                        htmlFor="face-upload"
+                        className={`cursor-pointer inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                          uploading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {uploading ? 'Uploading...' : 'Quick Upload'}
+                      </label>
+                    </div>
                   </div>
                 )}
               </div>
