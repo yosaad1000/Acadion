@@ -54,14 +54,13 @@ const ClassRoom: React.FC = () => {
 
   const fetchClassData = async () => {
     try {
-      const response = await fetch(`/api/subjects/${classId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const { apiCall } = await import('../lib/api');
+      const response = await apiCall(`/api/subjects/${classId}`);
       if (response.ok) {
         const data = await response.json();
         setClassData(data);
+      } else {
+        console.error('Failed to fetch class data:', response.status);
       }
     } catch (error) {
       console.error('Error fetching class data:', error);
@@ -72,14 +71,13 @@ const ClassRoom: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch(`/api/subjects/${classId}/students`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const { apiCall } = await import('../lib/api');
+      const response = await apiCall(`/api/subjects/${classId}/students`);
       if (response.ok) {
         const data = await response.json();
         setStudents(data);
+      } else {
+        console.error('Failed to fetch students:', response.status);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -88,14 +86,17 @@ const ClassRoom: React.FC = () => {
 
   const fetchAttendanceData = async () => {
     try {
-      const response = await fetch(`/api/attendance/${classId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const { apiCall } = await import('../lib/api');
+      const response = await apiCall(`/api/attendance/${classId}`);
       if (response.ok) {
         const data = await response.json();
-        setAttendanceRecords(data);
+        // Filter attendance records for students to show only their own records
+        if (user?.user_type === 'student') {
+          const myRecords = data.filter((record: any) => record.student_id === user?.user_id);
+          setAttendanceRecords(myRecords);
+        } else {
+          setAttendanceRecords(data);
+        }
         console.log('📊 Attendance data loaded:', data);
       } else {
         console.error('Failed to fetch attendance data:', response.status);
@@ -225,7 +226,7 @@ const ClassRoom: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            {user?.user_type === 'teacher' && (
+            {user?.user_type === 'teacher' ? (
               <div className="bg-white rounded-lg shadow-sm border p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -249,6 +250,35 @@ const ClassRoom: React.FC = () => {
                       <div className="text-sm text-gray-500">Mark manually</div>
                     </div>
                   </button>
+                </div>
+              </div>
+            ) : (
+              /* Student Quick Actions */
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Student Actions</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => navigate(`/student-attendance/${classData.subject_id}`)}
+                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <CalendarIcon className="h-8 w-8 text-green-500 mr-3" />
+                    <div className="text-left">
+                      <div className="font-medium">View My Attendance</div>
+                      <div className="text-sm text-gray-500">Check attendance history</div>
+                    </div>
+                  </button>
+                  {!user?.is_face_registered && (
+                    <button 
+                      onClick={() => navigate('/register-face')}
+                      className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <CameraIcon className="h-8 w-8 text-blue-500 mr-3" />
+                      <div className="text-left">
+                        <div className="font-medium">Register Face</div>
+                        <div className="text-sm text-gray-500">Enable auto attendance</div>
+                      </div>
+                    </button>
+                  )}
                 </div>
               </div>
             )}

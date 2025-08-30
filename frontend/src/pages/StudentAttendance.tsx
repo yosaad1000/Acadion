@@ -50,14 +50,13 @@ const StudentAttendance: React.FC = () => {
 
   const fetchClassData = async () => {
     try {
-      const response = await fetch(`/api/subjects/${classId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const { apiCall } = await import('../lib/api');
+      const response = await apiCall(`/api/subjects/${classId}`);
       if (response.ok) {
         const data = await response.json();
         setClassData(data);
+      } else {
+        console.error('Failed to fetch class data:', response.status);
       }
     } catch (error) {
       console.error('Error fetching class data:', error);
@@ -66,11 +65,8 @@ const StudentAttendance: React.FC = () => {
 
   const fetchAttendanceData = async () => {
     try {
-      const response = await fetch(`/api/attendance/${classId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const { apiCall } = await import('../lib/api');
+      const response = await apiCall(`/api/attendance/${classId}`);
       if (response.ok) {
         const data = await response.json();
         const myRecords = data.filter((record: any) => record.student_id === user?.user_id);
@@ -90,6 +86,8 @@ const StudentAttendance: React.FC = () => {
           late_count: lateCount,
           attendance_rate: totalSessions > 0 ? (presentCount / totalSessions) * 100 : 0
         });
+      } else {
+        console.error('Failed to fetch attendance data:', response.status);
       }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
@@ -185,7 +183,7 @@ const StudentAttendance: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate('/register-face')}
                 className="text-sm font-medium text-yellow-800 hover:text-yellow-900 bg-yellow-100 px-3 py-1 rounded"
               >
                 Register Now
