@@ -1,41 +1,32 @@
 # 🚀 GitHub Pages Setup Guide
 
-## Step-by-Step Instructions
+## Current Status
+✅ **Fixed**: Repository name references corrected to "Acadion"
+✅ **Fixed**: GitHub Actions workflow updated to handle existing Gemfile
+🔄 **Ready**: Two workflow options available for deployment
 
-### 1. Push Your Changes
-First, make sure all changes are committed and pushed:
+## Quick Setup Instructions
 
-```bash
-git add .
-git commit -m "Fix repository name references for GitHub Pages"
-git push origin main
-```
-
-### 2. Enable GitHub Pages
+### Option 1: GitHub Actions (Recommended)
 
 1. **Go to your repository**: https://github.com/yosaad1000/Acadion
-2. **Click on "Settings"** (top menu bar)
-3. **Scroll down to "Pages"** (left sidebar)
-4. **Under "Source"**, select **"GitHub Actions"**
+2. **Click "Settings"** → **"Pages"** (left sidebar)
+3. **Under "Source"**, select **"GitHub Actions"**
+4. **Click "Save"**
+
+The workflow will automatically run when you push changes to the `docs/` folder.
+
+### Option 2: Simple Jekyll (Alternative)
+
+1. **Go to Settings** → **"Pages"**
+2. **Under "Source"**, select **"Deploy from a branch"**
+3. **Select branch**: `main`
+4. **Select folder**: `/docs`
 5. **Click "Save"**
 
-### 3. Trigger the Workflow
+### 3. Access Your Documentation
 
-The GitHub Actions workflow should automatically trigger when you push changes to the `docs/` folder. If it doesn't:
-
-1. Go to the **"Actions"** tab in your repository
-2. Click on **"Deploy Documentation to GitHub Pages"**
-3. Click **"Run workflow"** → **"Run workflow"**
-
-### 4. Check Deployment Status
-
-1. Go to **"Actions"** tab
-2. Look for the **"Deploy Documentation to GitHub Pages"** workflow
-3. Wait for it to complete (green checkmark)
-
-### 5. Access Your Documentation
-
-Once deployed, your documentation will be available at:
+Once deployed (2-3 minutes), your documentation will be available at:
 **https://yosaad1000.github.io/Acadion/**
 
 ## Troubleshooting
