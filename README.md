@@ -1,4 +1,4 @@
-# 🎓 Acadion - AI-Powered Student Management Platform
+# 🎓 Attendify - AI-Powered Student Management Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -62,8 +62,8 @@ A modern, comprehensive student management system with AI-powered facial recogni
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/yourusername/acadion.git
-cd acadion
+git clone https://github.com/yosaad1000/attendify.git
+cd attendify
 cp backend/.env.example backend/.env
 ```
 
@@ -101,7 +101,7 @@ docker-compose ps
 
 ## 📖 Documentation
 
-- **[📚 Complete Documentation](https://yourusername.github.io/acadion/)** - GitHub Pages
+- **[📚 Complete Documentation](https://yosaad1000.github.io/attendify/)** - GitHub Pages
 - **[🚀 Getting Started Guide](docs/getting-started.md)** - Detailed setup instructions
 - **[📡 API Reference](docs/api-documentation.md)** - Comprehensive API documentation
 - **[🏗️ Architecture Guide](docs/architecture.md)** - System design and components
@@ -170,10 +170,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/yourusername/acadion/issues)
-- **💬 Discussions**: [GitHub Discussions](https://github.com/yourusername/acadion/discussions)
-- **📧 Email**: support@acadion.com
-- **📖 Documentation**: [acadion.github.io](https://yourusername.github.io/acadion/)
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/yosaad1000/attendify/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/yosaad1000/attendify/discussions)
+- **📧 Email**: support@attendify.com
+- **📖 Documentation**: [attendify.github.io](https://yosaad1000.github.io/attendify/)
 
 ---
 
@@ -181,6 +181,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for modern education**
 
-[⭐ Star this repo](https://github.com/yourusername/acadion) • [🐛 Report Bug](https://github.com/yourusername/acadion/issues) • [✨ Request Feature](https://github.com/yourusername/acadion/issues)
+[⭐ Star this repo](https://github.com/yosaad1000/attendify) • [🐛 Report Bug](https://github.com/yosaad1000/attendify/issues) • [✨ Request Feature](https://github.com/yosaad1000/attendify/issues)
 
 </div>

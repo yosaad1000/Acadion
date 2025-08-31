@@ -6,7 +6,7 @@ nav_order: 5
 
 # 🚀 Deployment Guide
 
-This guide covers deploying Acadion to production environments, from simple single-server setups to scalable cloud deployments.
+This guide covers deploying Attendify to production environments, from simple single-server setups to scalable cloud deployments.
 
 ## Deployment Options
 
@@ -26,8 +26,8 @@ This guide covers deploying Acadion to production environments, from simple sing
 
 1. **Clone and Configure**
 ```bash
-git clone https://github.com/yourusername/acadion.git
-cd acadion
+git clone https://github.com/yosaad1000/attendify.git
+cd attendify
 cp docker-compose.prod.yml docker-compose.yml
 ```
 
@@ -130,22 +130,22 @@ volumes:
 
 1. **Create ECS Cluster**
 ```bash
-aws ecs create-cluster --cluster-name acadion-cluster
+aws ecs create-cluster --cluster-name attendify-cluster
 ```
 
 2. **Build and Push Images**
 ```bash
 # Build images
-docker build -t acadion-frontend ./frontend
-docker build -t acadion-backend ./backend
+docker build -t attendify-frontend ./frontend
+docker build -t attendify-backend ./backend
 
 # Tag for ECR
-docker tag acadion-frontend:latest 123456789.dkr.ecr.us-east-1.amazonaws.com/acadion-frontend:latest
-docker tag acadion-backend:latest 123456789.dkr.ecr.us-east-1.amazonaws.com/acadion-backend:latest
+docker tag attendify-frontend:latest 123456789.dkr.ecr.us-east-1.amazonaws.com/attendify-frontend:latest
+docker tag attendify-backend:latest 123456789.dkr.ecr.us-east-1.amazonaws.com/attendify-backend:latest
 
 # Push to ECR
-docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/acadion-frontend:latest
-docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/acadion-backend:latest
+docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/attendify-frontend:latest
+docker push 123456789.dkr.ecr.us-east-1.amazonaws.com/attendify-backend:latest
 ```
 
 3. **Create Task Definition**

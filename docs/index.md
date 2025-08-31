@@ -4,7 +4,7 @@ title: Home
 nav_order: 1
 ---
 
-# 🎓 Acadion - AI-Powered Student Management Platform
+# 🎓 Attendify - AI-Powered Student Management Platform
 
 A comprehensive student management system with facial recognition-based attendance tracking, built with modern web technologies.
 
@@ -58,8 +58,8 @@ Get up and running in under 5 minutes:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/acadion.git
-cd acadion
+git clone https://github.com/yosaad1000/attendify.git
+cd attendify
 
 # Set up environment
 cp backend/.env.example backend/.env

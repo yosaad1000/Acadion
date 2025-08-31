@@ -1,8 +1,8 @@
 # GitHub Pages Configuration
-title: "Acadion - AI-Powered Student Management Platform"
+title: "Attendify - AI-Powered Student Management Platform"
 description: "Comprehensive student management system with facial recognition-based attendance tracking"
 baseurl: ""
-url: "https://yourusername.github.io/acadion"
+url: "https://yosaad1000.github.io/attendify"
 
 # Theme
 theme: minima
@@ -21,8 +21,7 @@ header_pages:
   - contributing.md
 
 # Social links
-github_username: yourusername
-twitter_username: yourtwitter
+github_username: yosaad1000
 
 # Build settings
 markdown: kramdown
