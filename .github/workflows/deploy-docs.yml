@@ -1,9 +1,7 @@
-name: Deploy Documentation to GitHub Pages
+name: Deploy Documentation to GitHub Pages (Disabled)
 
 on:
-  push:
-    branches: [ main ]
-    paths: [ 'docs/**' ]
+  # Disabled - use pages-simple.yml instead
   workflow_dispatch:
 
 permissions:

@@ -1,5 +1,5 @@
 # Simple GitHub Pages deployment using built-in Jekyll
-name: Deploy GitHub Pages (Simple)
+name: Deploy GitHub Pages
 
 on:
   # Runs on pushes targeting the default branch

@@ -2,32 +2,76 @@
 
 ## Current Status
 ✅ **Fixed**: Repository name references corrected to "Acadion"
-✅ **Fixed**: GitHub Actions workflow updated to handle existing Gemfile
-🔄 **Ready**: Two workflow options available for deployment
+✅ **Fixed**: Workflow issues resolved
+✅ **Ready**: Multiple deployment options available
 
-## Quick Setup Instructions
+## 🎯 **Recommended: Simple Branch Deployment**
 
-### Option 1: GitHub Actions (Recommended)
+This is the easiest and most reliable method:
 
-1. **Go to your repository**: https://github.com/yosaad1000/Acadion
-2. **Click "Settings"** → **"Pages"** (left sidebar)
-3. **Under "Source"**, select **"GitHub Actions"**
-4. **Click "Save"**
+### Step 1: Enable GitHub Pages
+1. **Go to**: https://github.com/yosaad1000/Acadion
+2. **Click**: Settings → Pages (left sidebar)
+3. **Under "Source"**: Select **"Deploy from a branch"**
+4. **Branch**: Select **`main`**
+5. **Folder**: Select **`/docs`**
+6. **Click**: **"Save"**
 
-The workflow will automatically run when you push changes to the `docs/` folder.
+### Step 2: Wait for Deployment
+- GitHub will automatically build and deploy your site
+- Takes 2-3 minutes for first deployment
+- You'll see a green checkmark when ready
 
-### Option 2: Simple Jekyll (Alternative)
-
-1. **Go to Settings** → **"Pages"**
-2. **Under "Source"**, select **"Deploy from a branch"**
-3. **Select branch**: `main`
-4. **Select folder**: `/docs`
-5. **Click "Save"**
-
-### 3. Access Your Documentation
-
-Once deployed (2-3 minutes), your documentation will be available at:
+### Step 3: Access Your Documentation
 **https://yosaad1000.github.io/Acadion/**
+
+## 🔧 **Alternative: GitHub Actions**
+
+If you prefer using GitHub Actions:
+
+1. **Go to**: Settings → Pages
+2. **Under "Source"**: Select **"GitHub Actions"**
+3. **Click**: "Save"
+
+The workflow will run automatically when you push changes.
+
+## 🚨 **Troubleshooting**
+
+### If GitHub Pages Shows "404" or "Site Not Found":
+1. **Check repository is public** (required for free GitHub Pages)
+2. **Verify Pages is enabled** in Settings → Pages
+3. **Wait 5-10 minutes** for initial deployment
+4. **Check Actions tab** for any failed workflows
+
+### If Build Fails:
+1. **Try the simple branch method** (most reliable)
+2. **Check that docs/_config.yml exists**
+3. **Ensure all markdown files have proper front matter**
+
+### Common Issues:
+- **Repository must be public** for free GitHub Pages
+- **Wait time**: Initial deployment can take up to 10 minutes
+- **Cache**: Try hard refresh (Ctrl+F5) if changes don't appear
+
+## 📋 **What You'll Get**
+
+Once working, your documentation will include:
+- **Main Documentation**: https://yosaad1000.github.io/Acadion/
+- **Getting Started Guide**: https://yosaad1000.github.io/Acadion/getting-started
+- **API Documentation**: https://yosaad1000.github.io/Acadion/api-documentation
+- **Architecture Guide**: https://yosaad1000.github.io/Acadion/architecture
+- **Deployment Guide**: https://yosaad1000.github.io/Acadion/deployment
+- **Contributing Guide**: https://yosaad1000.github.io/Acadion/contributing
+
+## ✅ **Success Indicators**
+
+You'll know it's working when:
+1. **Settings → Pages** shows a green checkmark and URL
+2. **Actions tab** shows successful deployments (if using Actions)
+3. **Your documentation URL** loads properly
+4. **Navigation links** work between pages
+
+**The simple branch deployment method is recommended as it's the most reliable!** 🎉
 
 ## Troubleshooting
 
