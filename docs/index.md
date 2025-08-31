@@ -1,56 +1,121 @@
 ---
 layout: default
 title: Home
-nav_order: 1
 ---
 
-# 🎓 Acadion - AI-Powered Student Management Platform
+<div style="text-align: center; margin: 2rem 0;">
+  <div style="display: inline-flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; justify-content: center;">
+    <span class="badge"><i class="fab fa-python"></i> Python 3.8+</span>
+    <span class="badge"><i class="fab fa-react"></i> React 18</span>
+    <span class="badge"><i class="fas fa-robot"></i> AI-Powered</span>
+    <span class="badge success"><i class="fas fa-docker"></i> Docker Ready</span>
+    <span class="badge"><i class="fas fa-shield-alt"></i> Secure</span>
+  </div>
+  
+  <div style="margin: 2rem 0;">
+    <a href="{{ '/getting-started' | relative_url }}" class="btn">
+      <i class="fas fa-rocket"></i> Get Started
+    </a>
+    <a href="https://github.com/yosaad1000/Acadion" class="btn btn-secondary" target="_blank">
+      <i class="fab fa-github"></i> View on GitHub
+    </a>
+    <a href="{{ '/api-documentation' | relative_url }}" class="btn btn-secondary">
+      <i class="fas fa-code"></i> API Docs
+    </a>
+  </div>
+</div>
 
-A comprehensive student management system with facial recognition-based attendance tracking, built with modern web technologies.
+## ✨ Why Choose Acadion?
+
+A modern, comprehensive student management system that revolutionizes how educational institutions handle attendance tracking through cutting-edge AI technology.
 
 ## ✨ Key Features
 
-### 🔐 Authentication & Security
-- **JWT-based Authentication** with secure token handling
-- **Role-based Access Control** (Teachers & Students)
-- **Supabase Integration** for scalable user management
+<div class="feature-grid">
+  <div class="feature-card">
+    <h3><i class="fas fa-shield-alt"></i> Authentication & Security</h3>
+    <ul>
+      <li><strong>JWT-based Authentication</strong> with secure token handling</li>
+      <li><strong>Role-based Access Control</strong> (Teachers & Students)</li>
+      <li><strong>Supabase Integration</strong> for scalable user management</li>
+      <li><strong>Data Encryption</strong> at rest and in transit</li>
+    </ul>
+  </div>
 
-### 👨‍🏫 Teacher Dashboard
-- **Class Management** - Create and manage classes with unique invite codes
-- **AI-Powered Attendance** - Upload group photos for instant face recognition
-- **Student Analytics** - Track attendance patterns and performance
-- **Manual Override** - Traditional attendance marking when needed
+  <div class="feature-card">
+    <h3><i class="fas fa-chalkboard-teacher"></i> Teacher Dashboard</h3>
+    <ul>
+      <li><strong>Class Management</strong> - Create and manage classes with unique invite codes</li>
+      <li><strong>AI-Powered Attendance</strong> - Upload group photos for instant face recognition</li>
+      <li><strong>Student Analytics</strong> - Track attendance patterns and performance</li>
+      <li><strong>Manual Override</strong> - Traditional attendance marking when needed</li>
+    </ul>
+  </div>
 
-### 👨‍🎓 Student Portal
-- **Easy Class Enrollment** using teacher-provided invite codes
-- **Face Registration** - One-time setup for automatic attendance
-- **Attendance History** - View personal attendance records
-- **Profile Management** - Update personal information and preferences
+  <div class="feature-card">
+    <h3><i class="fas fa-user-graduate"></i> Student Portal</h3>
+    <ul>
+      <li><strong>Easy Class Enrollment</strong> using teacher-provided invite codes</li>
+      <li><strong>Face Registration</strong> - One-time setup for automatic attendance</li>
+      <li><strong>Attendance History</strong> - View personal attendance records</li>
+      <li><strong>Profile Management</strong> - Update personal information and preferences</li>
+    </ul>
+  </div>
 
-### 🤖 Advanced AI Features
-- **Multi-Face Detection** - Process multiple students in single photo
-- **High Accuracy Recognition** - Advanced face matching algorithms
-- **Duplicate Prevention** - Smart detection prevents double-counting
-- **Confidence Scoring** - Reliability metrics for each recognition
+  <div class="feature-card">
+    <h3><i class="fas fa-robot"></i> Advanced AI Features</h3>
+    <ul>
+      <li><strong>Multi-Face Detection</strong> - Process multiple students in single photo</li>
+      <li><strong>High Accuracy Recognition</strong> - Advanced face matching algorithms</li>
+      <li><strong>Duplicate Prevention</strong> - Smart detection prevents double-counting</li>
+      <li><strong>Confidence Scoring</strong> - Reliability metrics for each recognition</li>
+    </ul>
+  </div>
+</div>
 
 ## 🛠️ Technology Stack
 
-### Frontend
-- **React 18** with TypeScript for type safety
-- **Tailwind CSS** for modern, responsive design
-- **Vite** for lightning-fast development
-- **React Query** for efficient state management
+<div class="feature-grid">
+  <div class="feature-card">
+    <h3><i class="fab fa-react"></i> Frontend</h3>
+    <ul>
+      <li><strong>React 18</strong> with TypeScript for type safety</li>
+      <li><strong>Tailwind CSS</strong> for modern, responsive design</li>
+      <li><strong>Vite</strong> for lightning-fast development</li>
+      <li><strong>React Query</strong> for efficient state management</li>
+    </ul>
+  </div>
 
-### Backend
-- **FastAPI** - High-performance Python API framework
-- **Supabase** - PostgreSQL database with real-time features
-- **Pinecone** - Vector database for face embeddings
-- **OpenCV** - Computer vision for face processing
+  <div class="feature-card">
+    <h3><i class="fab fa-python"></i> Backend</h3>
+    <ul>
+      <li><strong>FastAPI</strong> - High-performance Python API framework</li>
+      <li><strong>Supabase</strong> - PostgreSQL database with real-time features</li>
+      <li><strong>Pinecone</strong> - Vector database for face embeddings</li>
+      <li><strong>OpenCV</strong> - Computer vision for face processing</li>
+    </ul>
+  </div>
 
-### Infrastructure
-- **Docker** - Containerized deployment
-- **Nginx** - Production web server
-- **GitHub Actions** - CI/CD pipeline
+  <div class="feature-card">
+    <h3><i class="fas fa-cloud"></i> Infrastructure</h3>
+    <ul>
+      <li><strong>Docker</strong> - Containerized deployment</li>
+      <li><strong>Nginx</strong> - Production web server</li>
+      <li><strong>GitHub Actions</strong> - CI/CD pipeline</li>
+      <li><strong>Redis</strong> - Caching and session management</li>
+    </ul>
+  </div>
+
+  <div class="feature-card">
+    <h3><i class="fas fa-mobile-alt"></i> Mobile & More</h3>
+    <ul>
+      <li><strong>React Native</strong> - Cross-platform mobile app</li>
+      <li><strong>Expo</strong> - Mobile development platform</li>
+      <li><strong>Progressive Web App</strong> - Offline capabilities</li>
+      <li><strong>Responsive Design</strong> - Works on all devices</li>
+    </ul>
+  </div>
+</div>
 
 ## 🚀 Quick Start
 
@@ -83,15 +148,27 @@ docker-compose up -d
 
 ## 🎯 Use Cases
 
-### Educational Institutions
-- **Universities** - Manage large student populations efficiently
-- **Schools** - Streamline attendance tracking for teachers
-- **Training Centers** - Monitor student engagement and participation
+<div class="feature-grid">
+  <div class="feature-card">
+    <h3><i class="fas fa-university"></i> Educational Institutions</h3>
+    <ul>
+      <li><strong>Universities</strong> - Manage large student populations efficiently</li>
+      <li><strong>K-12 Schools</strong> - Streamline daily attendance tracking</li>
+      <li><strong>Training Centers</strong> - Monitor student engagement and participation</li>
+      <li><strong>Online Academies</strong> - Hybrid learning attendance management</li>
+    </ul>
+  </div>
 
-### Corporate Training
-- **Employee Training** - Track attendance for compliance
-- **Workshops** - Automated attendance for events
-- **Certification Programs** - Maintain accurate records
+  <div class="feature-card">
+    <h3><i class="fas fa-building"></i> Corporate Training</h3>
+    <ul>
+      <li><strong>Employee Training</strong> - Track attendance for compliance requirements</li>
+      <li><strong>Workshops & Seminars</strong> - Automated attendance for events</li>
+      <li><strong>Certification Programs</strong> - Maintain accurate attendance records</li>
+      <li><strong>Professional Development</strong> - Monitor learning progress</li>
+    </ul>
+  </div>
+</div>
 
 ## 🔒 Security & Privacy
 

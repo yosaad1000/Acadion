@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: "en-US" }}">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    {% seo %}
+    
+    <link rel="stylesheet" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+      :root {
+        --primary-color: #2563eb;
+        --secondary-color: #1e40af;
+        --accent-color: #3b82f6;
+        --text-color: #1f2937;
+        --text-light: #6b7280;
+        --bg-color: #ffffff;
+        --bg-light: #f8fafc;
+        --border-color: #e5e7eb;
+        --success-color: #10b981;
+        --warning-color: #f59e0b;
+        --error-color: #ef4444;
+      }
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: var(--text-color);
+        background: var(--bg-color);
+      }
+      
+      .header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        padding: 2rem 0;
+        text-align: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+      
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+      
+      .header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      
+      .nav {
+        background: var(--bg-light);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      
+      .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 2rem;
+      }
+      
+      .nav a {
+        color: var(--text-color);
+        text-decoration: none;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      
+      .nav a:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-1px);
+      }
+      
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+      }
+      
+      .content {
+        background: white;
+        border-radius: 1rem;
+        padding: 3rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+      }
+      
+      h1, h2, h3, h4, h5, h6 {
+        color: var(--text-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        line-height: 1.3;
+      }
+      
+      h1 { font-size: 2.5rem; }
+      h2 { font-size: 2rem; margin-top: 2rem; }
+      h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+      h4 { font-size: 1.25rem; margin-top: 1rem; }
+      
+      p {
+        margin-bottom: 1.5rem;
+        color: var(--text-color);
+      }
+      
+      a {
+        color: var(--primary-color);
+        text-decoration: none;
+      }
+      
+      a:hover {
+        text-decoration: underline;
+      }
+      
+      code {
+        background: var(--bg-light);
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 0.9em;
+        color: var(--error-color);
+      }
+      
+      pre {
+        background: #1f2937;
+        color: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        margin: 1.5rem 0;
+        line-height: 1.5;
+      }
+      
+      pre code {
+        background: none;
+        color: inherit;
+        padding: 0;
+      }
+      
+      blockquote {
+        border-left: 4px solid var(--primary-color);
+        padding-left: 1.5rem;
+        margin: 1.5rem 0;
+        color: var(--text-light);
+        font-style: italic;
+      }
+      
+      ul, ol {
+        margin-bottom: 1.5rem;
+        padding-left: 2rem;
+      }
+      
+      li {
+        margin-bottom: 0.5rem;
+      }
+      
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5rem 0;
+        background: white;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      }
+      
+      th, td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      th {
+        background: var(--bg-light);
+        font-weight: 600;
+        color: var(--text-color);
+      }
+      
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        margin: 0.5rem 0.5rem 0.5rem 0;
+      }
+      
+      .btn:hover {
+        background: var(--secondary-color);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        text-decoration: none;
+        color: white;
+      }
+      
+      .btn-secondary {
+        background: var(--bg-light);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+      }
+      
+      .btn-secondary:hover {
+        background: var(--border-color);
+        color: var(--text-color);
+      }
+      
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin: 2rem 0;
+      }
+      
+      .feature-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color);
+        transition: all 0.2s;
+      }
+      
+      .feature-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+      
+      .feature-card h3 {
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin: 0.25rem;
+      }
+      
+      .badge.success { background: var(--success-color); }
+      .badge.warning { background: var(--warning-color); }
+      .badge.error { background: var(--error-color); }
+      
+      .footer {
+        background: var(--bg-light);
+        border-top: 1px solid var(--border-color);
+        padding: 2rem 0;
+        text-align: center;
+        color: var(--text-light);
+        margin-top: 4rem;
+      }
+      
+      .footer a {
+        color: var(--primary-color);
+      }
+      
+      @media (max-width: 768px) {
+        .header h1 { font-size: 2rem; }
+        .header p { font-size: 1rem; }
+        .container { padding: 2rem 1rem; }
+        .content { padding: 2rem 1.5rem; }
+        .nav-container { flex-direction: column; align-items: center; gap: 1rem; }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.5rem; }
+      }
+      
+      /* Syntax highlighting improvements */
+      .highlight { border-radius: 0.5rem; }
+      .highlight pre { margin: 0; }
+      
+      /* Emoji styling */
+      .emoji {
+        font-style: normal;
+        font-size: 1.2em;
+        margin-right: 0.5rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="header">
+      <div class="container">
+        <h1>🎓 {{ site.title }}</h1>
+        <p>{{ site.description }}</p>
+      </div>
+    </header>
+
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="{{ '/' | relative_url }}">
+          <i class="fas fa-home"></i> Home
+        </a>
+        <a href="{{ '/getting-started' | relative_url }}">
+          <i class="fas fa-rocket"></i> Getting Started
+        </a>
+        <a href="{{ '/api-documentation' | relative_url }}">
+          <i class="fas fa-code"></i> API Docs
+        </a>
+        <a href="{{ '/architecture' | relative_url }}">
+          <i class="fas fa-sitemap"></i> Architecture
+        </a>
+        <a href="{{ '/deployment' | relative_url }}">
+          <i class="fas fa-cloud"></i> Deployment
+        </a>
+        <a href="{{ '/contributing' | relative_url }}">
+          <i class="fas fa-users"></i> Contributing
+        </a>
+        <a href="https://github.com/{{ site.github_username }}/{{ site.repository | split: '/' | last }}" target="_blank">
+          <i class="fab fa-github"></i> GitHub
+        </a>
+      </div>
+    </nav>
+
+    <main class="container">
+      <div class="content">
+        {{ content }}
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>
+          Built with ❤️ for modern education • 
+          <a href="https://github.com/{{ site.github_username }}/{{ site.repository | split: '/' | last }}">View on GitHub</a> • 
+          <a href="https://github.com/{{ site.github_username }}/{{ site.repository | split: '/' | last }}/issues">Report Issues</a>
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Add smooth scrolling
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          document.querySelector(this.getAttribute('href')).scrollIntoView({
+            behavior: 'smooth'
+          });
+        });
+      });
+
+      // Add copy button to code blocks
+      document.querySelectorAll('pre').forEach(pre => {
+        const button = document.createElement('button');
+        button.innerHTML = '<i class="fas fa-copy"></i>';
+        button.style.cssText = `
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+          background: rgba(255,255,255,0.1);
+          border: none;
+          color: white;
+          padding: 0.5rem;
+          border-radius: 0.25rem;
+          cursor: pointer;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        `;
+        button.addEventListener('click', () => {
+          navigator.clipboard.writeText(pre.textContent);
+          button.innerHTML = '<i class="fas fa-check"></i>';
+          setTimeout(() => button.innerHTML = '<i class="fas fa-copy"></i>', 2000);
+        });
+        button.addEventListener('mouseenter', () => button.style.opacity = '1');
+        button.addEventListener('mouseleave', () => button.style.opacity = '0.7');
+        
+        pre.style.position = 'relative';
+        pre.appendChild(button);
+      });
+    </script>
+  </body>
+</html>
