@@ -1,11 +1,11 @@
 # 🤖 AI Agents Navigation Guide
 
-This document provides AI agents with comprehensive information about the Attendify codebase structure, patterns, and navigation guidelines.
+This document provides AI agents with comprehensive information about the Acadion codebase structure, patterns, and navigation guidelines.
 
 ## 📁 Project Structure
 
 ```
-attendify/
+acadion/
 ├── 🔧 backend/                 # FastAPI backend application
 │   ├── app/                    # Main application code
 │   │   ├── core/              # Core utilities and configurations
@@ -292,4 +292,4 @@ export const subjectService = {
 7. **Use consistent patterns** shown in existing code
 8. **Test changes** with health checks and API docs
 
-This guide should help AI agents navigate and understand the Attendify codebase efficiently. The project follows modern best practices with clear separation of concerns and consistent patterns throughout.
+This guide should help AI agents navigate and understand the Acadion codebase efficiently. The project follows modern best practices with clear separation of concerns and consistent patterns throughout.

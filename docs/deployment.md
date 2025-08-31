@@ -6,7 +6,7 @@ nav_order: 5
 
 # 🚀 Deployment Guide
 
-This guide covers deploying Attendify to production environments, from simple single-server setups to scalable cloud deployments.
+This guide covers deploying Acadion to production environments, from simple single-server setups to scalable cloud deployments.
 
 ## Deployment Options
 
@@ -26,8 +26,8 @@ This guide covers deploying Attendify to production environments, from simple si
 
 1. **Clone and Configure**
 ```bash
-git clone https://github.com/yosaad1000/attendify.git
-cd attendify
+git clone https://github.com/yosaad1000/Acadion.git
+cd Acadion
 cp docker-compose.prod.yml docker-compose.yml
 ```
 

@@ -6,7 +6,7 @@ nav_order: 3
 
 # 📡 API Documentation
 
-Attendify provides a comprehensive REST API built with FastAPI. All endpoints are documented with OpenAPI/Swagger.
+Acadion provides a comprehensive REST API built with FastAPI. All endpoints are documented with OpenAPI/Swagger.
 
 ## Interactive Documentation
 

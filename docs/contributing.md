@@ -4,7 +4,7 @@ title: Contributing
 nav_order: 6
 ---
 
-# 🤝 Contributing to Attendify
+# 🤝 Contributing to Acadion
 
 We welcome contributions from the community! Whether you're fixing bugs, adding features, improving documentation, or helping with translations, your contributions are valued.
 
@@ -20,14 +20,14 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 ### Development Setup
 
 1. **Fork the Repository**
-   - Go to [https://github.com/yosaad1000/attendify](https://github.com/yosaad1000/attendify)
+   - Go to [https://github.com/yosaad1000/Acadion](https://github.com/yosaad1000/Acadion)
    - Click "Fork" to create your own copy
 
 2. **Clone Your Fork**
 ```bash
-git clone https://github.com/yosaad1000/attendify.git
-cd attendify
-git remote add upstream https://github.com/yosaad1000/attendify.git
+git clone https://github.com/yosaad1000/Acadion.git
+cd Acadion
+git remote add upstream https://github.com/yosaad1000/Acadion.git
 ```
 
 3. **Set Up Development Environment**

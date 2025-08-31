@@ -6,7 +6,7 @@ nav_order: 2
 
 # 🚀 Getting Started
 
-This guide will help you set up Attendify on your local machine in under 10 minutes.
+This guide will help you set up Acadion on your local machine in under 10 minutes.
 
 ## Prerequisites
 
@@ -22,8 +22,8 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yosaad1000/attendify.git
-cd attendify
+git clone https://github.com/yosaad1000/Acadion.git
+cd Acadion
 ```
 
 ### 2. Environment Configuration
