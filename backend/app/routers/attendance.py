@@ -64,9 +64,9 @@ async def mark_attendance_by_face(
         # Read image data
         image_data = await file.read()
         
-        # Recognize student using face recognition
+        # Recognize student using face recognition (filtered by subject)
         from app.services.face_recognition import face_recognition_service
-        result = face_recognition_service.recognize_student(image_data)
+        result = face_recognition_service.recognize_student(image_data, subject_id)
         
         print(f"🔍 Face recognition result: success={result.get('success')}")
         print(f"🔍 Recognized students count: {len(result.get('recognized_students', []))}")

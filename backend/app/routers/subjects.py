@@ -105,6 +105,15 @@ async def join_subject(
         if not enrollment:
             raise HTTPException(status_code=500, detail="Failed to join subject")
         
+        # Update face encoding with new subject enrollment
+        try:
+            from app.services.face_migration_service import face_migration_service
+            await face_migration_service.update_student_face_subjects(current_user.user_id)
+            logger.info(f"Updated face encoding subjects for student {current_user.user_id}")
+        except Exception as e:
+            logger.warning(f"Failed to update face encoding subjects for student {current_user.user_id}: {e}")
+            # Don't fail the enrollment if face encoding update fails
+        
         return SubjectEnrollmentResponse(
             subject_id=subject["subject_id"],
             subject_name=subject["name"],

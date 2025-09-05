@@ -46,38 +46,70 @@ class StorageService:
         self.face_index = self.pc.Index(config.PINECONE_INDEX_NAME)
     
     # Face recognition methods (Pinecone operations)
-    def store_student_face(self, student_id, name, face_encoding):
-        """Store student face encoding in Pinecone"""
+    def store_student_face(self, student_id, name, face_encoding, subject_ids=None):
+        """Store student face encoding in Pinecone with subject metadata"""
         try:
             logger.info(f"Storing face encoding for student {student_id} ({name})")
             logger.info(f"Face encoding shape: {face_encoding.shape}, dimension: {len(face_encoding)}")
             
+            # Get all subjects the student is enrolled in if not provided
+            if subject_ids is None:
+                try:
+                    enrolled_subjects = self.get_student_subjects(student_id)
+                    subject_ids = [subject['subject_id'] for subject in enrolled_subjects] if enrolled_subjects else []
+                except Exception as e:
+                    logger.warning(f"Could not fetch subjects for student {student_id}: {e}")
+                    subject_ids = []
+            
+            metadata = {
+                "name": name,
+                "student_id": student_id,
+                "subject_ids": subject_ids,  # List of subjects student is enrolled in
+                "created_at": datetime.now().isoformat()
+            }
+            
             self.face_index.upsert(vectors=[{
                 "id": student_id,
                 "values": face_encoding.tolist(),
-                "metadata": {
-                    "name": name,
-                    "student_id": student_id
-                }
+                "metadata": metadata
             }])
-            logger.info(f"Successfully stored face encoding for {student_id}")
+            logger.info(f"Successfully stored face encoding for {student_id} with subjects: {subject_ids}")
         except Exception as e:
             logger.error(f"Error storing face encoding for {student_id}: {e}")
             raise
     
-    def find_matching_face(self, face_encoding):
-        """Find a matching face in Pinecone"""
-        results = self.face_index.query(
-            vector=face_encoding.tolist(),
-            top_k=1,
-            include_metadata=True
-        )
-        
-        if results['matches'] and results['matches'][0]['score'] < config.FACE_THRESHOLD:
-            match = results['matches'][0]
-            return match['id'], match['metadata'].get('name', 'Unknown'), match['score']
-        
-        return None, "Unknown", 1.0
+    def find_matching_face(self, face_encoding, subject_id=None):
+        """Find a matching face in Pinecone, optionally filtered by subject"""
+        try:
+            query_params = {
+                "vector": face_encoding.tolist(),
+                "top_k": 10,  # Get more results to filter by subject
+                "include_metadata": True
+            }
+            
+            # If subject_id is provided, add filter to only search students in that subject
+            if subject_id:
+                query_params["filter"] = {
+                    "subject_ids": {"$in": [subject_id]}
+                }
+                logger.info(f"Filtering face search by subject_id: {subject_id}")
+            
+            results = self.face_index.query(**query_params)
+            
+            if results['matches']:
+                # Find the best match above threshold
+                for match in results['matches']:
+                    if match['score'] >= (1 - config.FACE_THRESHOLD):  # Pinecone uses cosine similarity (higher = better)
+                        logger.info(f"Found matching face: {match['id']} with score {match['score']}")
+                        return match['id'], match['metadata'].get('name', 'Unknown'), match['score']
+                
+                logger.info(f"No matches above threshold. Best score: {results['matches'][0]['score']}")
+            
+            return None, "Unknown", 1.0
+            
+        except Exception as e:
+            logger.error(f"Error finding matching face: {e}")
+            return None, "Unknown", 1.0
     
     # Database operations (delegated to adapter)
     def add_department(self, department):

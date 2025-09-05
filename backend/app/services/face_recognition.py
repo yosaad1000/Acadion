@@ -70,21 +70,27 @@ class FaceRecognitionService:
             print(f"💥 Error extracting face encoding: {e}")
             return None
     
-    def store_face_encoding(self, student_id: str, encoding: np.ndarray) -> bool:
-        """Store face encoding in Pinecone"""
+    def store_face_encoding(self, student_id: str, encoding: np.ndarray, subject_ids: List[str] = None) -> bool:
+        """Store face encoding in Pinecone with subject metadata"""
         try:
             # Convert numpy array to list for Pinecone
             encoding_list = encoding.tolist()
+            
+            metadata = {
+                "student_id": student_id,
+                "created_at": str(np.datetime64('now'))
+            }
+            
+            # Add subject information if provided
+            if subject_ids:
+                metadata["subject_ids"] = subject_ids
             
             # Store in Pinecone with student_id as the vector ID
             self.index.upsert(
                 vectors=[{
                     "id": student_id,
                     "values": encoding_list,
-                    "metadata": {
-                        "student_id": student_id,
-                        "created_at": str(np.datetime64('now'))
-                    }
+                    "metadata": metadata
                 }]
             )
             
@@ -94,26 +100,36 @@ class FaceRecognitionService:
             print(f"Error storing face encoding: {e}")
             return False
     
-    def find_matching_student(self, encoding: np.ndarray) -> Optional[Tuple[str, float]]:
-        """Find matching student by face encoding"""
+    def find_matching_student(self, encoding: np.ndarray, subject_id: str = None) -> Optional[Tuple[str, float]]:
+        """Find matching student by face encoding, optionally filtered by subject"""
         try:
             # Convert numpy array to list for Pinecone query
             encoding_list = encoding.tolist()
             print(f"🔍 Querying Pinecone with encoding vector (length: {len(encoding_list)})")
             
+            query_params = {
+                "vector": encoding_list,
+                "top_k": 10,  # Get more matches to filter by subject
+                "include_metadata": True
+            }
+            
+            # Add subject filter if provided
+            if subject_id:
+                query_params["filter"] = {
+                    "subject_ids": {"$in": [subject_id]}
+                }
+                print(f"🎯 Filtering by subject_id: {subject_id}")
+            
             # Query Pinecone for similar faces
-            results = self.index.query(
-                vector=encoding_list,
-                top_k=5,  # Get top 5 matches for better debugging
-                include_metadata=True
-            )
+            results = self.index.query(**query_params)
             
             print(f"📊 Pinecone returned {len(results.matches)} matches")
             
             # Log all matches for debugging
             for i, match in enumerate(results.matches):
                 student_id = match.metadata.get('student_id', 'Unknown')
-                print(f"🎯 Match {i+1}: Student {student_id}, Score: {match.score:.4f}")
+                subject_ids = match.metadata.get('subject_ids', [])
+                print(f"🎯 Match {i+1}: Student {student_id}, Score: {match.score:.4f}, Subjects: {subject_ids}")
             
             if results.matches and len(results.matches) > 0:
                 match = results.matches[0]
@@ -193,7 +209,7 @@ class FaceRecognitionService:
                 "message": f"Error processing photo: {str(e)}"
             }
     
-    def recognize_student(self, image_data: bytes) -> dict:
+    def recognize_student(self, image_data: bytes, subject_id: str = None) -> dict:
         """Recognize student from photo with detailed analysis"""
         try:
             print("🚀 Starting face recognition process...")
@@ -228,8 +244,8 @@ class FaceRecognitionService:
             for i, encoding in enumerate(face_encodings):
                 print(f"\n🔍 Processing face {i+1}/{len(face_encodings)}")
                 
-                # Find matching student
-                match_result = self.find_matching_student(encoding)
+                # Find matching student (filtered by subject if provided)
+                match_result = self.find_matching_student(encoding, subject_id)
                 
                 if match_result:
                     student_id, similarity_score = match_result
