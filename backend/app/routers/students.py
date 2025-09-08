@@ -126,8 +126,19 @@ async def upload_student_photo(student_id: str, file: UploadFile = File(...)):
         # Read image data
         image_data = await file.read()
         
-        # Process face encoding
-        result = face_recognition_service.process_student_photo(student_id, image_data)
+        # Get all subjects the student is enrolled in
+        student_subjects = []
+        if db:
+            try:
+                subjects = await db.get_student_subjects(student_id)
+                student_subjects = [subject['subject_id'] for subject in subjects]
+                logger.info(f"Student {student_id} is enrolled in subjects: {student_subjects}")
+            except Exception as e:
+                logger.warning(f"Could not get subjects for student {student_id}: {e}")
+                student_subjects = []
+        
+        # Process face encoding with subject metadata
+        result = face_recognition_service.process_student_photo(student_id, image_data, student_subjects)
         
         if result["success"]:
             # Update student record with face encoding status

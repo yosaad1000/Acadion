@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
-from app.routers import auth, subjects, attendance, supabase_auth, face_migration
+from app.routers import auth, subjects, attendance, supabase_auth
+# from app.routers import face_migration  # Temporarily disabled due to Supabase client initialization issue
 
 app = FastAPI(
     title="AI-Powered Student Management Platform API",
@@ -32,7 +33,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(supabase_auth.router, prefix="/api/supabase-auth", tags=["Supabase Authentication"])
 app.include_router(subjects.router, prefix="/api/subjects", tags=["Subjects"])
 app.include_router(attendance.router, prefix="/api/attendance", tags=["Attendance"])
-app.include_router(face_migration.router, tags=["Face Migration"])
+# app.include_router(face_migration.router, tags=["Face Migration"])  # Temporarily disabled
 
 @app.get("/")
 async def root():

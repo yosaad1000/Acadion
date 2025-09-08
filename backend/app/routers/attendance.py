@@ -3,7 +3,7 @@ from typing import List
 from datetime import date
 from pydantic import BaseModel
 from app.models.user import UserResponse
-from app.routers.auth import get_current_user
+from app.middleware.supabase_auth import get_current_user_supabase
 from app.services.local_supabase import LocalSupabase
 # from app.services.face_recognition import face_recognition_service
 import logging
@@ -45,7 +45,7 @@ async def mark_attendance_by_face(
     session_id: str = "default",
     session_name: str = "Default Session",
     session_time: str = None,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user_supabase)
 ):
     """Mark attendance using face recognition"""
     try:
@@ -176,7 +176,7 @@ async def mark_attendance_by_face(
 async def get_attendance(
     subject_id: str,
     attendance_date: date = None,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user_supabase)
 ):
     """Get attendance records for a subject"""
     try:
@@ -207,7 +207,7 @@ async def get_attendance(
 @router.get("/{subject_id}/dashboard")
 async def get_attendance_dashboard(
     subject_id: str,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user_supabase)
 ):
     """Get attendance dashboard with statistics"""
     try:
@@ -248,7 +248,7 @@ async def get_attendance_dashboard(
 @router.post("/save-batch")
 async def save_batch_attendance(
     attendance_records: List[AttendanceRecord],
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user_supabase)
 ):
     """Save multiple attendance records at once (for face recognition results)"""
     try:
@@ -336,7 +336,7 @@ async def save_batch_attendance(
 @router.post("/manual")
 async def mark_manual_attendance(
     attendance: AttendanceRecord,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user_supabase)
 ):
     """Manually mark attendance (Teachers only)"""
     try:
@@ -391,7 +391,7 @@ async def mark_manual_attendance(
 async def get_attendance_sessions(
     subject_id: str,
     attendance_date: date = None,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user_supabase)
 ):
     """Get attendance sessions for a subject on a specific date"""
     try:
@@ -420,7 +420,7 @@ async def get_session_attendance(
     subject_id: str,
     session_id: str,
     attendance_date: date = None,
-    current_user: UserResponse = Depends(get_current_user)
+    current_user = Depends(get_current_user_supabase)
 ):
     """Get attendance records for a specific session"""
     try:

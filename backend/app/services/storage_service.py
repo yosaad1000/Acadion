@@ -5,8 +5,8 @@ from datetime import datetime
 from pinecone import Pinecone, ServerlessSpec
 
 from app.config import settings as config
-from services.database_interface import DatabaseInterface
-from services.supabase_adapter import SupabaseAdapter
+from app.services.database_interface import DatabaseInterface
+from app.services.supabase_adapter import SupabaseAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class StorageService:
     Uses dependency injection for database operations
     """
     def __init__(self, db_adapter: DatabaseInterface = None):
-        # Use provided adapter or default to Supabase
+        # Use provided adapter or default to SupabaseAdapter
         self.db = db_adapter or SupabaseAdapter()
         
         # Initialize Pinecone for face recognition
@@ -52,14 +52,10 @@ class StorageService:
             logger.info(f"Storing face encoding for student {student_id} ({name})")
             logger.info(f"Face encoding shape: {face_encoding.shape}, dimension: {len(face_encoding)}")
             
-            # Get all subjects the student is enrolled in if not provided
+            # For testing phase, use empty subject list if not provided
             if subject_ids is None:
-                try:
-                    enrolled_subjects = self.get_student_subjects(student_id)
-                    subject_ids = [subject['subject_id'] for subject in enrolled_subjects] if enrolled_subjects else []
-                except Exception as e:
-                    logger.warning(f"Could not fetch subjects for student {student_id}: {e}")
-                    subject_ids = []
+                subject_ids = []
+                logger.info(f"No subjects provided for {student_id}, using empty list for testing")
             
             metadata = {
                 "name": name,

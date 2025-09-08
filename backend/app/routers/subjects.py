@@ -107,9 +107,18 @@ async def join_subject(
         
         # Update face encoding with new subject enrollment
         try:
-            from app.services.face_migration_service import face_migration_service
-            await face_migration_service.update_student_face_subjects(current_user.user_id)
-            logger.info(f"Updated face encoding subjects for student {current_user.user_id}")
+            from app.services.face_recognition import face_recognition_service
+            
+            # Get all subjects the student is now enrolled in
+            all_subjects = await db.get_student_subjects(current_user.user_id)
+            subject_ids = [subj['subject_id'] for subj in all_subjects]
+            
+            # Update the face encoding metadata in Pinecone
+            success = face_recognition_service.update_face_encoding_subjects(current_user.user_id, subject_ids)
+            if success:
+                logger.info(f"Updated face encoding subjects for student {current_user.user_id}: {subject_ids}")
+            else:
+                logger.warning(f"Face encoding not found for student {current_user.user_id} - they may need to register their face")
         except Exception as e:
             logger.warning(f"Failed to update face encoding subjects for student {current_user.user_id}: {e}")
             # Don't fail the enrollment if face encoding update fails

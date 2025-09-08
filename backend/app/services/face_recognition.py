@@ -176,8 +176,56 @@ class FaceRecognitionService:
             print(f"Error updating face encoding: {e}")
             return False
     
-    def process_student_photo(self, student_id: str, image_data: bytes) -> dict:
-        """Process student photo and store face encoding"""
+    def update_face_encoding_subjects(self, student_id: str, subject_ids: List[str]) -> bool:
+        """Update face encoding metadata with new subject enrollment"""
+        try:
+            # Check if student has a face encoding
+            query_result = self.index.query(
+                vector=[0.0] * 128,  # Dummy vector for metadata-only query
+                filter={"student_id": {"$eq": student_id}},
+                top_k=1,
+                include_metadata=True
+            )
+            
+            if not query_result.matches:
+                print(f"No face encoding found for student {student_id}")
+                return False
+            
+            # Get the existing vector
+            existing_match = query_result.matches[0]
+            
+            # Fetch the full vector data
+            fetch_result = self.index.fetch(ids=[student_id])
+            if student_id not in fetch_result.vectors:
+                print(f"Could not fetch vector data for student {student_id}")
+                return False
+            
+            vector_data = fetch_result.vectors[student_id]
+            current_metadata = vector_data.metadata or {}
+            
+            # Update metadata with new subject list
+            updated_metadata = {
+                **current_metadata,
+                "student_id": student_id,
+                "subject_ids": subject_ids
+            }
+            
+            # Upsert with updated metadata
+            self.index.upsert(vectors=[{
+                "id": student_id,
+                "values": vector_data.values,
+                "metadata": updated_metadata
+            }])
+            
+            print(f"Updated face encoding subjects for student {student_id}: {subject_ids}")
+            return True
+            
+        except Exception as e:
+            print(f"Error updating face encoding subjects for student {student_id}: {e}")
+            return False
+    
+    def process_student_photo(self, student_id: str, image_data: bytes, subject_ids: List[str] = None) -> dict:
+        """Process student photo and store face encoding with subject metadata"""
         try:
             # Extract face encoding
             encoding = self.extract_face_encoding(image_data)
@@ -188,14 +236,15 @@ class FaceRecognitionService:
                     "message": "No face detected in the image"
                 }
             
-            # Store encoding in Pinecone
-            success = self.store_face_encoding(student_id, encoding)
+            # Store encoding in Pinecone with subject metadata
+            success = self.store_face_encoding(student_id, encoding, subject_ids)
             
             if success:
                 return {
                     "success": True,
-                    "message": "Face encoding stored successfully",
-                    "encoding_stored": True
+                    "message": "Face encoding stored successfully with subject metadata",
+                    "encoding_stored": True,
+                    "subject_ids": subject_ids or []
                 }
             else:
                 return {
