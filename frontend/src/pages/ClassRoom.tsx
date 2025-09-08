@@ -33,7 +33,7 @@ interface Student {
 const ClassRoom: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
@@ -43,7 +43,7 @@ const ClassRoom: React.FC = () => {
   useEffect(() => {
     if (classId) {
       fetchClassData();
-      if (user?.user_type === 'teacher') {
+      if (currentRole === 'teacher') {
         fetchStudents();
       }
       if (activeTab === 'attendance') {
@@ -91,7 +91,7 @@ const ClassRoom: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         // Filter attendance records for students to show only their own records
-        if (user?.user_type === 'student') {
+        if (currentRole === 'student') {
           const myRecords = data.filter((record: any) => record.student_id === user?.user_id);
           setAttendanceRecords(myRecords);
         } else {
@@ -151,7 +151,7 @@ const ClassRoom: React.FC = () => {
               </div>
             </div>
             
-            {user?.user_type === 'teacher' && (
+            {currentRole === 'teacher' && (
               <div className="flex items-center space-x-3">
                 <InviteCodeDisplay code={classData.invite_code} size="md" />
                 <button className="p-2 text-gray-400 hover:text-gray-600">
@@ -226,7 +226,7 @@ const ClassRoom: React.FC = () => {
             </div>
 
             {/* Quick Actions */}
-            {user?.user_type === 'teacher' ? (
+            {currentRole === 'teacher' ? (
               <div className="bg-white rounded-lg shadow-sm border p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -354,7 +354,7 @@ const ClassRoom: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900">Attendance Overview</h2>
-              {user?.user_type === 'teacher' ? (
+              {currentRole === 'teacher' ? (
                 <button
                   onClick={() => navigate(`/attendance-dashboard/${classData.subject_id}`)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
@@ -450,12 +450,12 @@ const ClassRoom: React.FC = () => {
             
             <div className="mt-6 text-center">
               <p className="text-gray-600 mb-4">
-                {user?.user_type === 'teacher' 
+                {currentRole === 'teacher' 
                   ? 'Start taking attendance to see detailed analytics and reports.'
                   : 'Your attendance records will appear here once classes begin.'
                 }
               </p>
-              {user?.user_type === 'teacher' && (
+              {currentRole === 'teacher' && (
                 <button
                   onClick={() => navigate(`/take-attendance/${classData.subject_id}`)}
                   className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"

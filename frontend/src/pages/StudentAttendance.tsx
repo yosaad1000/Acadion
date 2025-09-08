@@ -32,7 +32,7 @@ interface AttendanceStats {
 const StudentAttendance: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isFetchingProfile } = useAuth();
   const [classData, setClassData] = useState<any>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [stats, setStats] = useState<AttendanceStats | null>(null);
@@ -42,11 +42,12 @@ const StudentAttendance: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (classId) {
+    // Only fetch data if we have classId, user is authenticated, and not currently fetching profile
+    if (classId && user && !isFetchingProfile) {
       fetchClassData();
       fetchAttendanceData();
     }
-  }, [classId, selectedMonth]);
+  }, [classId, selectedMonth, user, isFetchingProfile]);
 
   const fetchClassData = async () => {
     try {
@@ -126,7 +127,7 @@ const StudentAttendance: React.FC = () => {
     record.date.startsWith(selectedMonth)
   );
 
-  if (loading) {
+  if (loading || isFetchingProfile || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

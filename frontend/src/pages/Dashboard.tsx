@@ -16,13 +16,13 @@ interface Subject {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Debug logging
   console.log('Dashboard - Current user:', user);
-  console.log('Dashboard - User type:', user?.user_type);
+  console.log('Dashboard - Current role:', currentRole);
 
   useEffect(() => {
     fetchSubjects();
@@ -70,10 +70,10 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {user?.user_type === 'teacher' ? 'Teaching' : 'Enrolled Classes'}
+                {currentRole === 'teacher' ? 'Teaching' : 'Enrolled Classes'}
               </h1>
               <p className="text-gray-600 mt-1">
-                {user?.user_type === 'teacher' 
+                {currentRole === 'teacher' 
                   ? 'Manage your classes and students' 
                   : 'Access your enrolled classes'
                 }
@@ -82,7 +82,7 @@ const Dashboard: React.FC = () => {
             
             {/* Action Buttons */}
             <div className="flex space-x-3">
-              {user?.user_type === 'teacher' ? (
+              {currentRole === 'teacher' ? (
                 <Link
                   to="/create-class"
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -110,16 +110,16 @@ const Dashboard: React.FC = () => {
           <div className="text-center py-12">
             <BookOpenIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">
-              {user?.user_type === 'teacher' ? 'No classes created' : 'No classes joined'}
+              {currentRole === 'teacher' ? 'No classes created' : 'No classes joined'}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              {user?.user_type === 'teacher' 
+              {currentRole === 'teacher' 
                 ? 'Get started by creating your first class.' 
                 : 'Join a class using the class code provided by your teacher.'
               }
             </p>
             <div className="mt-6">
-              {user?.user_type === 'teacher' ? (
+              {currentRole === 'teacher' ? (
                 <Link
                   to="/create-class"
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -160,7 +160,7 @@ const Dashboard: React.FC = () => {
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-gray-600">
-                        {user?.user_type === 'teacher' ? 'You' : subject.teacher_name}
+                        {currentRole === 'teacher' ? 'You' : subject.teacher_name}
                       </span>
                       <div className="flex items-center text-sm text-gray-500">
                         <UserGroupIcon className="h-4 w-4 mr-1" />
@@ -174,7 +174,7 @@ const Dashboard: React.FC = () => {
                       </p>
                     )}
                     
-                    {user?.user_type === 'teacher' && (
+                    {currentRole === 'teacher' && (
                       <InviteCodeDisplay code={subject.invite_code} size="sm" />
                     )}
                   </div>

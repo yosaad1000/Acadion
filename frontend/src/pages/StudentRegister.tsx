@@ -55,7 +55,7 @@ const StudentRegister: React.FC = () => {
       console.log('Submitting student data:', formData);
       
       // First, create the student record
-      const studentResponse = await fetch('/api/students', {
+      const studentResponse = await fetch('http://localhost:8000/api/students', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ const StudentRegister: React.FC = () => {
         const photoFormData = new FormData();
         photoFormData.append('file', photo);
 
-        const photoResponse = await fetch(`/api/students/${formData.student_id}/upload-photo`, {
+        const photoResponse = await fetch(`http://localhost:8000/api/students/${formData.student_id}/upload-photo`, {
           method: 'POST',
           body: photoFormData,
         });

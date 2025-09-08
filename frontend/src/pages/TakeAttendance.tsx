@@ -67,9 +67,9 @@ const TakeAttendance: React.FC = () => {
 
   const fetchClassData = async () => {
     try {
-      const response = await fetch(`/api/subjects/${classId}`, {
+      const response = await fetch(`http://localhost:8000/api/subjects/${classId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {
@@ -83,9 +83,9 @@ const TakeAttendance: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch(`/api/subjects/${classId}/students`, {
+      const response = await fetch(`http://localhost:8000/api/subjects/${classId}/students`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {
@@ -116,9 +116,9 @@ const TakeAttendance: React.FC = () => {
   const fetchSessions = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/attendance/${classId}/sessions?attendance_date=${today}`, {
+      const response = await fetch(`http://localhost:8000/api/attendance/${classId}/sessions?attendance_date=${today}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {
@@ -212,11 +212,11 @@ const TakeAttendance: React.FC = () => {
     formData.append('file', file);
 
     try {
-      const url = `/api/attendance/mark-face?subject_id=${classId}&session_id=${currentSession.session_id}&session_name=${encodeURIComponent(currentSession.session_name)}&session_time=${currentSession.session_time}`;
+      const url = `http://localhost:8000/api/attendance/mark-face?subject_id=${classId}&session_id=${currentSession.session_id}&session_name=${encodeURIComponent(currentSession.session_name)}&session_time=${currentSession.session_time}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         },
         body: formData
       });
@@ -360,11 +360,11 @@ const TakeAttendance: React.FC = () => {
         try {
           console.log(`🔄 Saving student ${record.student_id} with status ${record.status}`);
           
-          const response = await fetch('/api/attendance/manual', {
+          const response = await fetch('http://localhost:8000/api/attendance/manual', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
+              'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
             },
             body: JSON.stringify({
               student_id: record.student_id,

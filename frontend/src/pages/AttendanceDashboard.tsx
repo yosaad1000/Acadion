@@ -80,9 +80,9 @@ const AttendanceDashboard: React.FC = () => {
 
   const fetchClassData = async () => {
     try {
-      const response = await fetch(`/api/subjects/${classId}`, {
+      const response = await fetch(`http://localhost:8000/api/subjects/${classId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {
@@ -96,9 +96,9 @@ const AttendanceDashboard: React.FC = () => {
 
   const fetchAttendanceData = async () => {
     try {
-      const response = await fetch(`/api/attendance/${classId}/dashboard`, {
+      const response = await fetch(`http://localhost:8000/api/attendance/${classId}/dashboard`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {
@@ -125,9 +125,9 @@ const AttendanceDashboard: React.FC = () => {
 
   const fetchSessions = async () => {
     try {
-      const response = await fetch(`/api/attendance/${classId}/sessions?attendance_date=${selectedDate}`, {
+      const response = await fetch(`http://localhost:8000/api/attendance/${classId}/sessions?attendance_date=${selectedDate}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {
@@ -137,10 +137,10 @@ const AttendanceDashboard: React.FC = () => {
         const enhancedSessions = await Promise.all(
           sessionData.map(async (session: any) => {
             const sessionResponse = await fetch(
-              `/api/attendance/${classId}/sessions/${session.session_id}?attendance_date=${selectedDate}`,
+              `http://localhost:8000/api/attendance/${classId}/sessions/${session.session_id}?attendance_date=${selectedDate}`,
               {
                 headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
                 }
               }
             );
@@ -179,9 +179,9 @@ const AttendanceDashboard: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch(`/api/subjects/${classId}/students`, {
+      const response = await fetch(`http://localhost:8000/api/subjects/${classId}/students`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CameraIcon, UserIcon } from '@heroicons/react/24/outline';
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -53,17 +53,17 @@ const Profile: React.FC = () => {
                 <h1 className="text-2xl font-bold text-gray-900">{user?.name}</h1>
                 <p className="text-gray-600">{user?.email}</p>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
-                  user?.user_type === 'teacher' 
+                  currentRole === 'teacher' 
                     ? 'bg-blue-100 text-blue-800' 
                     : 'bg-green-100 text-green-800'
                 }`}>
-                  {user?.user_type === 'teacher' ? 'Teacher' : 'Student'}
+                  {currentRole === 'teacher' ? 'Teacher' : 'Student'}
                 </span>
               </div>
             </div>
           </div>
 
-          {user?.user_type === 'student' && (
+          {currentRole === 'student' && (
             <div className="border-t border-gray-200 px-6 py-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Face Recognition</h2>
               

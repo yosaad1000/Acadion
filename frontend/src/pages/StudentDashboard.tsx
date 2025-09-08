@@ -22,6 +22,7 @@ interface EnrolledSubject {
 }
 
 const StudentDashboard: React.FC = () => {
+  console.log('🎓 StudentDashboard component rendered');
   const { user } = useAuth();
   const [subjects, setSubjects] = useState<EnrolledSubject[]>([]);
   const [loading, setLoading] = useState(true);

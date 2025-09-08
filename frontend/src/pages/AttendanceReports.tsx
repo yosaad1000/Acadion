@@ -26,7 +26,7 @@ const AttendanceReports: React.FC = () => {
 
   const fetchAttendanceReports = async () => {
     try {
-      let url = '/api/attendance/reports';
+      let url = 'http://localhost:8000/api/attendance/reports';
       const params = new URLSearchParams();
       
       if (selectedSubject) params.append('subject_id', selectedSubject);
@@ -37,7 +37,11 @@ const AttendanceReports: React.FC = () => {
         url += `?${params.toString()}`;
       }
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setReports(data);

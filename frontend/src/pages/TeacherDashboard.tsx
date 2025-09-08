@@ -23,6 +23,7 @@ interface TeachingSubject {
 }
 
 const TeacherDashboard: React.FC = () => {
+  console.log('🏫 TeacherDashboard component rendered');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [subjects, setSubjects] = useState<TeachingSubject[]>([]);

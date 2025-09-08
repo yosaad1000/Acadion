@@ -60,9 +60,9 @@ const ViewStudents: React.FC = () => {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects', {
+      const response = await fetch('http://localhost:8000/api/subjects', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {
@@ -82,9 +82,9 @@ const ViewStudents: React.FC = () => {
   const fetchStudents = async (subjectId: string) => {
     setLoadingStudents(true);
     try {
-      const response = await fetch(`/api/subjects/${subjectId}/students`, {
+      const response = await fetch(`http://localhost:8000/api/subjects/${subjectId}/students`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
         }
       });
       if (response.ok) {

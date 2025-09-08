@@ -22,7 +22,7 @@ const Students: React.FC = () => {
   const fetchStudents = async () => {
     try {
       // API call to /api/students
-      const response = await fetch('/api/students');
+      const response = await fetch('http://localhost:8000/api/students');
       if (response.ok) {
         const data = await response.json();
         setStudents(data);

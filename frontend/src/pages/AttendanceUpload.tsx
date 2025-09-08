@@ -38,7 +38,7 @@ const AttendanceUpload: React.FC = () => {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects');
+      const response = await fetch('http://localhost:8000/api/subjects');
       if (response.ok) {
         const data = await response.json();
         setSubjects(data);
@@ -76,7 +76,7 @@ const AttendanceUpload: React.FC = () => {
       formData.append('subject_id', selectedSubject);
       formData.append('faculty_id', facultyId);
 
-      const response = await fetch('/api/attendance/face-recognition', {
+      const response = await fetch('http://localhost:8000/api/attendance/face-recognition', {
         method: 'POST',
         body: formData,
       });
@@ -101,7 +101,7 @@ const AttendanceUpload: React.FC = () => {
   const pollForResults = async (sessionId: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/attendance/status/${sessionId}`);
+        const response = await fetch(`http://localhost:8000/api/attendance/status/${sessionId}`);
         if (response.ok) {
           const data: ProcessingResult = await response.json();
           setResult(data);
