@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { CameraIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, CheckCircleIcon, ExclamationTriangleIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import CameraCapture from '../components/CameraCapture';
+import { useCamera } from '../hooks/useCamera';
 
 const FaceRegistration: React.FC = () => {
   const { user } = useAuth();
@@ -11,7 +13,9 @@ const FaceRegistration: React.FC = () => {
   const [messageType, setMessageType] = useState<'success' | 'error' | ''>('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { hasCamera, isSupported } = useCamera();
 
   // Redirect if already registered
   React.useEffect(() => {
@@ -91,6 +95,19 @@ const FaceRegistration: React.FC = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    setSelectedImage(file);
+    setMessage('');
+    setMessageType('');
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const clearSelection = () => {
@@ -177,16 +194,30 @@ const FaceRegistration: React.FC = () => {
                 ) : (
                   <div className="space-y-4">
                     <CameraIcon className="mx-auto h-16 w-16 text-gray-400" />
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                        disabled={uploading}
-                      >
-                        Select Photo
-                      </button>
-                      <p className="text-sm text-gray-500 mt-2">
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        {isSupported && hasCamera && (
+                          <button
+                            type="button"
+                            onClick={() => setShowCamera(true)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center"
+                            disabled={uploading}
+                          >
+                            <CameraIcon className="h-5 w-5 mr-2" />
+                            Take Photo
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className={`${isSupported && hasCamera ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center`}
+                          disabled={uploading}
+                        >
+                          <PhotoIcon className="h-5 w-5 mr-2" />
+                          Upload Photo
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500">
                         JPG, PNG up to 10MB
                       </p>
                     </div>
@@ -268,6 +299,15 @@ const FaceRegistration: React.FC = () => {
           <p>🔒 Your face data is securely encrypted and stored for attendance purposes only.</p>
         </div>
       </div>
+
+      {/* Camera Modal */}
+      <CameraCapture
+        isOpen={showCamera}
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+        title="Register Your Face"
+        instructions="Position your face in the center and ensure good lighting"
+      />
     </div>
   );
 };

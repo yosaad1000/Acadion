@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CameraIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import CameraCapture from '../components/CameraCapture';
 
 const StudentRegister: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +17,7 @@ const StudentRegister: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -36,6 +39,15 @@ const StudentRegister: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    setPhoto(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPhotoPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -270,15 +282,26 @@ const StudentRegister: React.FC = () => {
                       <div className="mx-auto h-32 w-32 rounded-full bg-gray-100 flex items-center justify-center">
                         <span className="text-4xl text-gray-400">📷</span>
                       </div>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                        >
-                          Upload Photo
-                        </button>
-                        <p className="text-xs text-gray-500 mt-2">
+                      <div className="space-y-3">
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowCamera(true)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center"
+                          >
+                            <CameraIcon className="h-4 w-4 mr-2" />
+                            Take Photo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center"
+                          >
+                            <PhotoIcon className="h-4 w-4 mr-2" />
+                            Upload Photo
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500">
                           JPG, PNG up to 10MB. Clear face photo recommended.
                         </p>
                       </div>
@@ -337,6 +360,15 @@ const StudentRegister: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* Camera Modal */}
+      <CameraCapture
+        isOpen={showCamera}
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+        title="Take Profile Photo"
+        instructions="Position your face in the center with good lighting"
+      />
     </div>
   );
 };

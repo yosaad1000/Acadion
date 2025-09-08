@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { CameraIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import CameraCapture from '../components/CameraCapture';
 
 interface Subject {
   subject_id: string;
@@ -30,6 +32,7 @@ const AttendanceUpload: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ProcessingResult | null>(null);
   const [error, setError] = useState('');
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,6 +61,15 @@ const AttendanceUpload: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleUpload = async () => {
@@ -131,6 +143,9 @@ const AttendanceUpload: React.FC = () => {
     setResult(null);
     setError('');
     setSelectedSubject('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -201,16 +216,28 @@ const AttendanceUpload: React.FC = () => {
                   <div className="mx-auto h-24 w-24 rounded-full bg-gray-100 flex items-center justify-center">
                     <span className="text-4xl text-gray-400">📸</span>
                   </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                      disabled={processing}
-                    >
-                      Select Class Photo
-                    </button>
-                    <p className="text-xs text-gray-500 mt-2">
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setShowCamera(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center"
+                        disabled={processing}
+                      >
+                        <CameraIcon className="h-4 w-4 mr-2" />
+                        Take Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center"
+                        disabled={processing}
+                      >
+                        <PhotoIcon className="h-4 w-4 mr-2" />
+                        Upload Photo
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">
                       JPG, PNG up to 10MB. Group photo with clear faces works best.
                     </p>
                   </div>
@@ -370,6 +397,15 @@ const AttendanceUpload: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Camera Modal */}
+      <CameraCapture
+        isOpen={showCamera}
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+        title="Take Class Photo"
+        instructions="Capture a clear group photo with all students visible"
+      />
     </div>
   );
 };

@@ -7,8 +7,10 @@ import {
   ClipboardDocumentListIcon,
   UserIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  PhotoIcon
 } from '@heroicons/react/24/outline';
+import CameraCapture from '../components/CameraCapture';
 
 interface Student {
   user_id: string;
@@ -48,6 +50,7 @@ const TakeAttendance: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [faceResults, setFaceResults] = useState<any>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const [currentSession, setCurrentSession] = useState<Session>({
     session_id: 'default',
     session_name: 'Default Session',
@@ -194,9 +197,17 @@ const TakeAttendance: React.FC = () => {
     setShowSessionModal(false);
   };
 
+  const handleCameraCapture = async (file: File) => {
+    await processPhotoForAttendance(file);
+  };
+
   const handleFaceRecognition = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    await processPhotoForAttendance(file);
+  };
+
+  const processPhotoForAttendance = async (file: File) => {
 
     setUploadingPhoto(true);
     setFaceResults(null);
@@ -298,8 +309,6 @@ const TakeAttendance: React.FC = () => {
       });
     } finally {
       setUploadingPhoto(false);
-      // Reset file input
-      event.target.value = '';
     }
   };
 
@@ -495,25 +504,35 @@ const TakeAttendance: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Face Recognition Attendance</h3>
 
-          <div className="flex items-center space-x-4 mb-6">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFaceRecognition}
-              className="hidden"
-              id="face-photo"
-              disabled={uploadingPhoto}
-            />
-            <label
-              htmlFor="face-photo"
-              className={`cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-            >
-              <CameraIcon className="h-5 w-5 mr-2" />
-              {uploadingPhoto ? 'Processing...' : 'Take Photo for Attendance'}
-            </label>
+          <div className="space-y-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setShowCamera(true)}
+                disabled={uploadingPhoto}
+                className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <CameraIcon className="h-5 w-5 mr-2" />
+                {uploadingPhoto ? 'Processing...' : 'Take Photo'}
+              </button>
+              
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFaceRecognition}
+                className="hidden"
+                id="face-photo"
+                disabled={uploadingPhoto}
+              />
+              <label
+                htmlFor="face-photo"
+                className={`cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <PhotoIcon className="h-5 w-5 mr-2" />
+                Upload Photo
+              </label>
+            </div>
             <p className="text-sm text-gray-600">
-              Take a photo to automatically detect and mark attendance for students
+              Take or upload a photo to automatically detect and mark attendance for students
             </p>
           </div>
 
@@ -776,6 +795,15 @@ const TakeAttendance: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Camera Modal */}
+      <CameraCapture
+        isOpen={showCamera}
+        onCapture={handleCameraCapture}
+        onClose={() => setShowCamera(false)}
+        title="Take Attendance Photo"
+        instructions="Capture a clear group photo with all students visible"
+      />
     </div>
   );
 };
