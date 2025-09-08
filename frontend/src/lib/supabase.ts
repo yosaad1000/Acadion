@@ -1,19 +1,27 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://scijpejtvneuqbhkoxuz.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjaWpwZWp0dm5ldXFiaGtveHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1OTcxNDEsImV4cCI6MjA3MTE3MzE0MX0.Z6Q_DmsuHYOOvCGed5hcKDrT93XPL5hHwCyGDREcmmw'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Please check your .env file.')
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Database types
 export interface User {
-  user_id: string
+  id?: string
+  auth_user_id: string
+  user_id: string // Keep for backward compatibility
   email: string
   name: string
-  user_type: 'teacher' | 'student'
+  user_type: 'teacher' | 'student' // Keep for backward compatibility
+  active_role: 'teacher' | 'student'
   auth_provider: 'email' | 'google'
   is_face_registered: boolean
   created_at: string
+  updated_at?: string
 }
 
 export interface AuthUser extends User {
