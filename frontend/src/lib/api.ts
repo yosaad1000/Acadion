@@ -3,6 +3,22 @@ import { supabase } from './supabase';
 // API configuration for the frontend
 export const API_BASE_URL = 'http://localhost:8000';
 
+// Helper function to check if retry attempt header exists
+const hasRetryAttempt = (headers?: HeadersInit): boolean => {
+  if (!headers) return false;
+  
+  if (headers instanceof Headers) {
+    return headers.has('X-Retry-Attempt');
+  }
+  
+  if (Array.isArray(headers)) {
+    return headers.some(([key]) => key === 'X-Retry-Attempt');
+  }
+  
+  // Record<string, string> case
+  return 'X-Retry-Attempt' in headers;
+};
+
 // Helper function for making API calls
 export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -39,6 +55,35 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   if (!response.ok) {
     const errorText = await response.text();
     console.error('❌ API Error Response:', errorText);
+    
+    // If we get 401, try to refresh the session and retry once
+    if (response.status === 401 && !hasRetryAttempt(options.headers)) {
+      console.log('🔄 Got 401, attempting to refresh session and retry...');
+      
+      try {
+        const { data: { session: newSession } } = await supabase.auth.refreshSession();
+        if (newSession?.access_token) {
+          console.log('✅ Session refreshed, retrying API call...');
+          
+          // Retry the request with new token
+          const retryHeaders = {
+            ...defaultHeaders,
+            'Authorization': `Bearer ${newSession.access_token}`,
+            'X-Retry-Attempt': '1' // Prevent infinite retry
+          };
+          
+          const retryResponse = await fetch(url, {
+            ...options,
+            headers: retryHeaders,
+          });
+          
+          console.log('🔄 Retry response:', retryResponse.status, retryResponse.statusText);
+          return retryResponse;
+        }
+      } catch (refreshError) {
+        console.error('❌ Failed to refresh session:', refreshError);
+      }
+    }
   }
 
   return response;
