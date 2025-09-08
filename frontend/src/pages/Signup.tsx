@@ -1,29 +1,43 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { AcademicCapIcon, UserGroupIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signUp, signInWithGoogle } = useAuth();
+  const [userType, setUserType] = useState<'teacher' | 'student' | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: '',
-    user_type: 'student' as 'teacher' | 'student'
+    name: ''
   });
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showUserTypeModal, setShowUserTypeModal] = useState(false);
+
+  useEffect(() => {
+    // Get user type from location state or localStorage
+    const selectedType = location.state?.userType || localStorage.getItem('selected_user_type');
+    if (selectedType) {
+      setUserType(selectedType as 'teacher' | 'student');
+    } else {
+      // If no user type is selected, redirect to landing page
+      navigate('/');
+    }
+  }, [location, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userType) return;
+    
     setLoading(true);
     setError('');
 
     try {
-      await signUp(formData.email, formData.password, formData.name, formData.user_type);
-      // After successful signup, redirect to login or dashboard
+      await signUp(formData.email, formData.password, formData.name, userType);
+      // After successful signup, redirect to dashboard
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -32,14 +46,16 @@ const Signup: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
   };
 
-  const handleGoogleSignup = async (userType: 'teacher' | 'student') => {
+  const handleGoogleSignup = async () => {
+    if (!userType) return;
+    
     try {
       setGoogleLoading(true);
       await signInWithGoogle(userType);
@@ -50,51 +66,51 @@ const Signup: React.FC = () => {
     }
   };
 
-  const GoogleSignupModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold mb-4">Select Your Role</h3>
-        <p className="text-gray-600 mb-6">Are you signing up as a teacher or student?</p>
-        <div className="space-y-3">
-          <button
-            onClick={() => {
-              setShowUserTypeModal(false);
-              handleGoogleSignup('teacher');
-            }}
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Teacher
-          </button>
-          <button
-            onClick={() => {
-              setShowUserTypeModal(false);
-              handleGoogleSignup('student');
-            }}
-            className="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700"
-          >
-            Student
-          </button>
-          <button
-            onClick={() => setShowUserTypeModal(false)}
-            className="w-full py-2 px-4 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-        </div>
+  const handleBackToLanding = () => {
+    localStorage.removeItem('selected_user_type');
+    navigate('/');
+  };
+
+  if (!userType) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
+        {/* Back Button */}
+        <button
+          onClick={handleBackToLanding}
+          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200"
+        >
+          <ArrowLeftIcon className="h-5 w-5 mr-2" />
+          Back to role selection
+        </button>
+
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
             <span className="text-white font-bold text-2xl">A</span>
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Join Attendify
+            Join Acadion
           </h2>
+          <div className="mt-4 flex items-center justify-center space-x-2">
+            {userType === 'teacher' ? (
+              <>
+                <AcademicCapIcon className="h-5 w-5 text-blue-600" />
+                <span className="text-blue-600 font-medium">Teacher Registration</span>
+              </>
+            ) : (
+              <>
+                <UserGroupIcon className="h-5 w-5 text-green-600" />
+                <span className="text-green-600 font-medium">Student Registration</span>
+              </>
+            )}
+          </div>
           <p className="mt-2 text-sm text-gray-600">
             Create your account to get started
           </p>
@@ -157,21 +173,7 @@ const Signup: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label htmlFor="user_type" className="block text-sm font-medium text-gray-700 mb-1">
-                I am a *
-              </label>
-              <select
-                id="user_type"
-                name="user_type"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={formData.user_type}
-                onChange={handleChange}
-              >
-                <option value="student">Student</option>
-                <option value="teacher">Teacher</option>
-              </select>
-            </div>
+
           </div>
 
           <div>
@@ -186,7 +188,7 @@ const Signup: React.FC = () => {
                   Creating account...
                 </div>
               ) : (
-                'Create Account with Email'
+                `Create ${userType === 'teacher' ? 'Teacher' : 'Student'} Account`
               )}
             </button>
           </div>
@@ -203,7 +205,7 @@ const Signup: React.FC = () => {
           <div>
             <button
               type="button"
-              onClick={() => setShowUserTypeModal(true)}
+              onClick={handleGoogleSignup}
               disabled={loading || googleLoading}
               className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -220,7 +222,7 @@ const Signup: React.FC = () => {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
-                  Continue with Google
+                  Continue with Google as {userType === 'teacher' ? 'Teacher' : 'Student'}
                 </>
               )}
             </button>
@@ -229,14 +231,16 @@ const Signup: React.FC = () => {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:text-blue-500 font-medium">
+              <Link 
+                to="/login" 
+                state={{ userType }}
+                className="text-blue-600 hover:text-blue-500 font-medium"
+              >
                 Sign in here
               </Link>
             </p>
           </div>
         </form>
-        
-        {showUserTypeModal && <GoogleSignupModal />}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
@@ -66,9 +67,13 @@ const DashboardRoute: React.FC = () => {
   }
   
   // Route based on current role
+  console.log('🎯 DashboardRoute decision - currentRole:', currentRole, 'typeof:', typeof currentRole);
+  
   if (currentRole === 'teacher') {
+    console.log('✅ Rendering TeacherDashboard');
     return <TeacherDashboard />;
   } else {
+    console.log('✅ Rendering StudentDashboard for role:', currentRole);
     return <StudentDashboard />;
   }
 };
@@ -78,6 +83,10 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
+      <Route 
+        path="/" 
+        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Landing />} 
+      />
       <Route 
         path="/login" 
         element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} 
