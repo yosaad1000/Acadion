@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { NotificationPreference } from '../types';
 
 // API configuration for the frontend
 export const API_BASE_URL = 'http://localhost:8000';
@@ -137,5 +138,23 @@ export const api = {
   registerFace: (data: any) => apiCall('/api/auth/register-face', {
     method: 'POST',
     body: JSON.stringify(data),
+  }),
+
+  // Notifications
+  getNotifications: (limit?: number) => {
+    const params = limit ? `?limit=${limit}` : '';
+    return apiCall(`/api/notifications${params}`);
+  },
+  markNotificationRead: (notificationId: string) => apiCall(`/api/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+  }),
+  markAllNotificationsRead: () => apiCall('/api/notifications/mark-all-read', {
+    method: 'PATCH',
+  }),
+  getUnreadCount: () => apiCall('/api/notifications/unread-count'),
+  getNotificationPreferences: () => apiCall('/api/notifications/preferences'),
+  updateNotificationPreferences: (preferences: NotificationPreference[]) => apiCall('/api/notifications/preferences', {
+    method: 'PUT',
+    body: JSON.stringify(preferences),
   }),
 };

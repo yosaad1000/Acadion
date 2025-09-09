@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { NotificationPreferences } from '../components/notifications';
 import { CameraIcon, UserIcon } from '@heroicons/react/24/outline';
 
 const Profile: React.FC = () => {
@@ -141,6 +142,11 @@ const Profile: React.FC = () => {
               )}
             </div>
           )}
+        </div>
+
+        {/* Notification Preferences Section */}
+        <div className="border-t border-gray-200 px-6 py-6">
+          <NotificationPreferences showHeader={true} />
         </div>
       </div>
     </div>

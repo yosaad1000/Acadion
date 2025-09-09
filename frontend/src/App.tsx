@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Layout from './components/Layout/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -17,6 +19,7 @@ import StudentAttendance from './pages/StudentAttendance';
 import ViewStudents from './pages/ViewStudents';
 import Profile from './pages/Profile';
 import FaceRegistration from './pages/FaceRegistration';
+import Notifications from './pages/Notifications';
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -24,8 +27,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 safe-area-padding">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-3 text-sm sm:text-base text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -41,9 +47,11 @@ const DashboardRoute: React.FC = () => {
   // If still loading, show loading spinner
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="ml-4">Loading user profile...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 safe-area-padding">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-3 text-sm sm:text-base text-gray-600">Loading user profile...</p>
+        </div>
       </div>
     );
   }
@@ -51,15 +59,15 @@ const DashboardRoute: React.FC = () => {
   // If no user profile but has session, show a profile creation prompt
   if (!user && session) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Profile Setup Required</h2>
-          <p className="text-gray-600 mb-4">Your account needs a profile to continue.</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 safe-area-padding px-4">
+        <div className="text-center max-w-md w-full">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Profile Setup Required</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Your account needs a profile to continue.</p>
           <button 
             onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="btn-mobile bg-blue-600 hover:bg-blue-700 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full sm:w-auto"
           >
-            Refresh Page
+            <span className="text-sm sm:text-base">Refresh Page</span>
           </button>
         </div>
       </div>
@@ -114,6 +122,7 @@ const AppRoutes: React.FC = () => {
         <Route path="students" element={<ViewStudents />} />
         <Route path="profile" element={<Profile />} />
         <Route path="register-face" element={<FaceRegistration />} />
+        <Route path="notifications" element={<Notifications />} />
         <Route path="" element={<Navigate to="/dashboard" />} />
       </Route>
     </Routes>
@@ -122,11 +131,15 @@ const AppRoutes: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </NotificationProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

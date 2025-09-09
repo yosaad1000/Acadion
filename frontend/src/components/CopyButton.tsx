@@ -32,22 +32,23 @@ const CopyButton: React.FC<CopyButtonProps> = ({
   return (
     <button
       onClick={handleCopy}
-      className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded transition-colors ${
+      className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded transition-colors touch-manipulation min-h-[32px] ${
         copied 
-          ? 'text-green-700 bg-green-50 border border-green-200' 
-          : 'text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100'
+          ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+          : 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600'
       } ${className}`}
       title={copied ? 'Copied!' : `Copy ${label}`}
+      aria-label={copied ? 'Copied to clipboard' : `Copy ${label} to clipboard`}
     >
       {copied ? (
         <>
-          <CheckIcon className="h-3 w-3 mr-1" />
-          {showLabel && 'Copied!'}
+          <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+          {showLabel && <span className="hidden xs:inline">Copied!</span>}
         </>
       ) : (
         <>
-          <ClipboardIcon className="h-3 w-3 mr-1" />
-          {showLabel && label}
+          <ClipboardIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+          {showLabel && <span className="hidden xs:inline">{label}</span>}
         </>
       )}
     </button>

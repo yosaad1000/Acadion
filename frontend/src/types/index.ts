@@ -85,3 +85,67 @@ export interface ApiResponse<T> {
   message?: string;
   error?: string;
 }
+
+// Notification Types
+export enum NotificationType {
+  STUDENT_JOINED = 'student_joined',
+  ATTENDANCE_MARKED = 'attendance_marked',
+  ATTENDANCE_FAILED = 'attendance_failed',
+  CLASS_JOINED = 'class_joined',
+  JOIN_FAILED = 'join_failed'
+}
+
+export interface Notification {
+  id: string;
+  recipient_id: string;
+  sender_id?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationPreference {
+  id?: string;
+  user_id: string;
+  notification_type: NotificationType;
+  enabled: boolean;
+  created_at?: string;
+}
+
+// Notification data structures for different types
+export interface StudentJoinedData {
+  student_name: string;
+  subject_name: string;
+  subject_code: string;
+  joined_at: string;
+}
+
+export interface AttendanceMarkedData {
+  subject_name: string;
+  session_name: string;
+  total_students: number;
+  present_count: number;
+  marked_at: string;
+}
+
+export interface ClassJoinedData {
+  subject_name: string;
+  teacher_name: string;
+  invite_code: string;
+}
+
+export interface AttendanceFailedData {
+  subject_name: string;
+  error_message: string;
+  failed_at: string;
+}
+
+export interface JoinFailedData {
+  subject_name?: string;
+  invite_code: string;
+  error_message: string;
+  failed_at: string;
+}

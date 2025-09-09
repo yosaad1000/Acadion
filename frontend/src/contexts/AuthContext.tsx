@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '../lib/supabase';
 import type { Session } from '@supabase/supabase-js';
@@ -28,17 +28,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [userRoles, setUserRoles] = useState<string[]>(['student']);
   const [currentRole, setCurrentRole] = useState<string>('student');
-  const [isFetchingProfile, setIsFetchingProfile] = useState(false);
-  const [lastFetchedUserId, setLastFetchedUserId] = useState<string | null>(null);
+
+  // Use refs to avoid stale closures and infinite loops
+  const isFetchingProfile = useRef(false);
+  const lastFetchedUserId = useRef<string | null>(null);
+  const currentUserRef = useRef<User | null>(null);
 
   useEffect(() => {
     console.log('🔄 AuthContext initializing...');
 
-    // Timeout protection - increased to 10 seconds for better reliability
+    // Timeout protection - force loading to false after 8 seconds
     const timeout = setTimeout(() => {
       console.log('⏰ Auth timeout - forcing loading to false');
       setLoading(false);
-    }, 10000);
+      isFetchingProfile.current = false;
+    }, 8000);
 
     const fetchUserProfile = async (session: any) => {
       if (!session?.user) {
@@ -46,39 +50,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      if (isFetchingProfile) {
+      if (isFetchingProfile.current) {
         console.log('⏳ Profile fetch already in progress, skipping...');
         return;
       }
 
-      setIsFetchingProfile(true);
+      isFetchingProfile.current = true;
+      console.log('🔍 Fetching user profile for:', session.user.email, 'ID:', session.user.id);
 
       try {
-        console.log('🔍 Fetching user profile for:', session.user.email, 'ID:', session.user.id);
-
-        // Try to fetch user profile with increased timeout
-        const { data: userData, error } = await supabase
+        // Try to fetch user profile with a timeout
+        const profilePromise = supabase
           .from('users')
           .select('*')
           .eq('auth_user_id', session.user.id)
           .maybeSingle();
 
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+        );
+
+        const { data: userData, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
         console.log('📊 Profile query result:', { userData, error });
 
-        if (error) {
-          console.error('❌ Error fetching user profile:', error);
-          // Continue with fallback user creation instead of returning
-        }
-
         if (userData && !error) {
-          console.log('✅ User profile loaded:', {
-            auth_user_id: userData.auth_user_id,
-            name: userData.name,
-            email: userData.email,
-            active_role: userData.active_role
-          });
+          console.log('✅ User profile found in database');
 
-          // Fetch all user roles
+          // Fetch user roles
           const { data: userRolesData } = await supabase
             .from('user_roles')
             .select('role_type')
@@ -88,158 +87,143 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const roles = userRolesData?.map(r => r.role_type) || [userData.active_role || 'student'];
 
           setUser(userData);
+          currentUserRef.current = userData;
           setCurrentRole(userData.active_role || 'student');
           setUserRoles(roles);
 
-          console.log('✅ Profile fetch completed successfully');
-          
-          // Clear the selected user type from localStorage since we have the user profile
+          console.log('✅ Profile loaded successfully');
           localStorage.removeItem('selected_user_type');
-        } else {
-          console.warn('⚠️ No user profile found or error occurred for auth_user_id:', session.user.id);
-          
-          // Get user type from various sources
-          const userType = localStorage.getItem('oauth_user_type') || 
-                          localStorage.getItem('selected_user_type') ||
-                          session.user.user_metadata?.user_type || 
-                          'student';
+          return;
+        }
 
-          console.log('🔍 Determined user type:', userType, 'from sources:', {
-            oauth: localStorage.getItem('oauth_user_type'),
-            selected: localStorage.getItem('selected_user_type'),
-            metadata: session.user.user_metadata?.user_type
-          });
+        // No user profile found, create one
+        console.log('⚠️ No user profile found, creating new profile...');
 
-          // Try to create the user profile in the database
-          try {
-            console.log('🔄 Attempting to create user profile in database...');
-            const { data: newUser, error: insertError } = await supabase
-              .from('users')
-              .insert({
-                auth_user_id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
-                active_role: userType,
-                auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-                is_face_registered: false
-              })
-              .select()
-              .single();
+        const userType = localStorage.getItem('oauth_user_type') ||
+          localStorage.getItem('selected_user_type') ||
+          session.user.user_metadata?.user_type ||
+          'student';
 
-            if (newUser && !insertError) {
-              console.log('✅ Created new user profile in database:', newUser);
-              
-              // Also create the user role
-              await supabase
-                .from('user_roles')
-                .insert({
-                  auth_user_id: session.user.id,
-                  role_type: userType,
-                  institution_context: 'default',
-                  is_active: true
-                });
-              
-              setUser(newUser);
-              setCurrentRole(userType);
-              setUserRoles([userType]);
-              
-              // Clear the selected user type from localStorage
-              localStorage.removeItem('selected_user_type');
-              return;
-            } else {
-              console.warn('⚠️ Could not create user profile in database:', insertError);
-            }
-          } catch (dbError) {
-            console.warn('⚠️ Database insert failed:', dbError);
-          }
+        console.log('🔍 Creating profile with user type:', userType);
 
-          // Create a temporary user object from session data to prevent auth failures
-          const tempUser: User = {
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert({
             auth_user_id: session.user.id,
-            user_id: session.user.id,
             email: session.user.email || '',
             name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
-            user_type: userType as 'teacher' | 'student',
-            active_role: userType as 'teacher' | 'student',
+            active_role: userType,
             auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-            is_face_registered: false,
-            created_at: new Date().toISOString()
-          };
+            is_face_registered: false
+          })
+          .select()
+          .single();
 
-          setUser(tempUser);
+        if (newUser && !insertError) {
+          console.log('✅ Created new user profile in database');
+
+          // Create user role
+          await supabase
+            .from('user_roles')
+            .insert({
+              auth_user_id: session.user.id,
+              role_type: userType,
+              institution_context: 'default',
+              is_active: true
+            });
+
+          setUser(newUser);
+          currentUserRef.current = newUser;
           setCurrentRole(userType);
           setUserRoles([userType]);
-
-          console.log('🔧 Created temporary user profile to prevent auth failures');
-          
-          // Clear the selected user type from localStorage
           localStorage.removeItem('selected_user_type');
+          return;
         }
+
+        // If database operations fail, create temporary user
+        console.warn('⚠️ Database operations failed, creating temporary user');
+        const tempUser: User = {
+          auth_user_id: session.user.id,
+          user_id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
+          user_type: userType as 'teacher' | 'student',
+          active_role: userType as 'teacher' | 'student',
+          auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+          is_face_registered: false,
+          created_at: new Date().toISOString()
+        };
+
+        setUser(tempUser);
+        currentUserRef.current = tempUser;
+        setCurrentRole(userType);
+        setUserRoles([userType]);
+        localStorage.removeItem('selected_user_type');
+
       } catch (error) {
-        console.error('❌ Could not fetch user profile:', error);
+        console.error('❌ Profile fetch error:', error);
 
-        // Create a fallback user object to prevent auth failures
-        if (session?.user) {
-          const userType = localStorage.getItem('oauth_user_type') || 
-                          localStorage.getItem('selected_user_type') ||
-                          session.user.user_metadata?.user_type || 
-                          'student';
-                          
-          console.log('🔧 Creating fallback user with type:', userType);
-                          
-          const fallbackUser: User = {
-            auth_user_id: session.user.id,
-            user_id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
-            user_type: userType as 'teacher' | 'student',
-            active_role: userType as 'teacher' | 'student',
-            auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-            is_face_registered: false,
-            created_at: new Date().toISOString()
-          };
+        // Create fallback user
+        const userType = localStorage.getItem('oauth_user_type') ||
+          localStorage.getItem('selected_user_type') ||
+          session.user.user_metadata?.user_type ||
+          'student';
 
-          setUser(fallbackUser);
-          setCurrentRole(userType);
-          setUserRoles([userType]);
+        const fallbackUser: User = {
+          auth_user_id: session.user.id,
+          user_id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
+          user_type: userType as 'teacher' | 'student',
+          active_role: userType as 'teacher' | 'student',
+          auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+          is_face_registered: false,
+          created_at: new Date().toISOString()
+        };
 
-          console.log('🔧 Created fallback user profile after error');
-          
-          // Clear the selected user type from localStorage
-          localStorage.removeItem('selected_user_type');
-        } else {
-          setUser(null);
-          setCurrentRole('student');
-          setUserRoles(['student']);
-        }
+        setUser(fallbackUser);
+        currentUserRef.current = fallbackUser;
+        setCurrentRole(userType);
+        setUserRoles([userType]);
+        localStorage.removeItem('selected_user_type');
+
+        console.log('🔧 Created fallback user profile');
       } finally {
-        setIsFetchingProfile(false);
+        isFetchingProfile.current = false;
+        console.log('🏁 Profile fetch process completed');
       }
     };
 
     const initAuth = async () => {
       try {
+        console.log('🚀 Starting initial auth check...');
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
 
         if (session?.user) {
+          console.log('📱 Session found, storing token and fetching profile...');
           // Store the session token for API calls
           if (session.access_token) {
             localStorage.setItem('supabase_token', session.access_token);
           }
 
+          lastFetchedUserId.current = session.user.id;
           await fetchUserProfile(session);
         } else {
+          console.log('❌ No session found, resetting to defaults');
           // No session, reset everything
           setUser(null);
+          currentUserRef.current = null;
           setCurrentRole('student');
           setUserRoles(['student']);
         }
       } catch (error) {
-        console.error('Auth init error:', error);
+        console.error('❌ Auth init error:', error);
       } finally {
+        console.log('🏁 Initial auth check completed, setting loading to false');
         clearTimeout(timeout);
         setLoading(false);
+        isFetchingProfile.current = false;
       }
     };
 
@@ -260,23 +244,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (session?.user) {
-        // Only fetch profile if we haven't fetched for this user ID, not currently fetching, and don't have user data
-        if (lastFetchedUserId !== session.user.id && !isFetchingProfile && (!user || user.user_id !== session.user.id)) {
-          console.log('🔄 New user session, fetching profile...');
-          setLastFetchedUserId(session.user.id);
+        // Check if this is a new user session that needs profile fetching
+        const isNewUser = lastFetchedUserId.current !== session.user.id;
+        const isNotFetching = !isFetchingProfile.current;
+        const hasNoUserData = !currentUserRef.current || currentUserRef.current.user_id !== session.user.id;
+
+        if (isNewUser && isNotFetching && hasNoUserData) {
+          console.log('🔄 New user session detected, fetching profile...');
+          lastFetchedUserId.current = session.user.id;
           await fetchUserProfile(session);
         } else {
-          console.log('✅ User profile already loaded for this session or fetch in progress, skipping');
+          console.log('✅ Skipping profile fetch - already loaded or in progress');
         }
       } else {
         // User signed out, reset everything
         console.log('🚪 User signed out, resetting state');
         setUser(null);
+        currentUserRef.current = null;
         setUserRoles(['student']);
         setCurrentRole('student');
-        setLastFetchedUserId(null);
+        lastFetchedUserId.current = null;
       }
 
+      // Always set loading to false after handling auth state change
       setLoading(false);
     });
 
@@ -284,7 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Empty dependency array to prevent infinite loops
 
   const signUp = async (email: string, password: string, name: string, userType: 'teacher' | 'student') => {
     const { error } = await supabase.auth.signUp({
@@ -318,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔄 Switching role to:', role);
 
       // Use the database function to switch role properly
-      const { data, error } = await supabase.rpc('switch_user_role', {
+      const { data: switchResult, error } = await supabase.rpc('switch_user_role', {
         p_auth_user_id: session.user.id,
         p_role_type: role,
         p_institution_context: 'default'
@@ -329,13 +319,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      if (!data) {
+      if (!switchResult) {
         throw new Error(`You don't have permission to switch to ${role} role`);
       }
 
       // Update local state
       setCurrentRole(role);
-      
+
       // Fetch updated user profile to get the latest active_role
       const { data: updatedUser } = await supabase
         .from('users')
@@ -361,7 +351,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('➕ Adding role:', role);
 
       // Use the database function to add role properly
-      const { data, error } = await supabase.rpc('add_user_role', {
+      const { data: addResult, error } = await supabase.rpc('add_user_role', {
         p_auth_user_id: session.user.id,
         p_role_type: role,
         p_institution_context: 'default'
@@ -401,10 +391,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Reset state immediately to prevent stale data
     setUser(null);
+    currentUserRef.current = null;
     setSession(null);
     setUserRoles(['student']);
     setCurrentRole('student');
     setLoading(false);
+    lastFetchedUserId.current = null;
 
     // Sign out from Supabase
     await supabase.auth.signOut();

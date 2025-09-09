@@ -3,14 +3,31 @@ from typing import List
 from datetime import date
 from pydantic import BaseModel
 from app.models.user import UserResponse
+from app.models.notification import NotificationCreate, NotificationType
 from app.middleware.supabase_auth import get_current_user_supabase
 from app.services.local_supabase import LocalSupabase
+from app.services.notification_service import NotificationService
 # from app.services.face_recognition import face_recognition_service
 import logging
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 db = LocalSupabase()
+
+# Lazy initialization - only create when needed
+_notification_service = None
+
+def get_notification_service():
+    """Get notification service with lazy initialization"""
+    global _notification_service
+    if _notification_service is None:
+        try:
+            _notification_service = NotificationService()
+            logger.info("NotificationService initialized successfully")
+        except Exception as e:
+            logger.warning(f"NotificationService unavailable: {e}")
+            _notification_service = False  # Mark as failed
+    return _notification_service if _notification_service is not False else None
 
 class AttendanceRecord(BaseModel):
     student_id: str
@@ -304,6 +321,40 @@ async def save_batch_attendance(
                         "success": True
                     })
                     saved_count += 1
+                    
+                    # Create notification for successful attendance marking
+                    if notification_service:
+                        try:
+                            # Get student details for notification
+                            student = await db.get_user_by_id(attendance.student_id)
+                            student_name = student.get("name", "Unknown Student") if student else "Unknown Student"
+                            
+                            # Notification for the student
+                            student_notification = NotificationCreate(
+                                recipient_id=attendance.student_id,
+                                sender_id=current_user.user_id,
+                                type=NotificationType.ATTENDANCE_MARKED,
+                                title="Attendance Marked",
+                                message=f"Your attendance has been marked as {attendance.status} for {subject['name']}",
+                                data={
+                                    "subject_name": subject["name"],
+                                    "subject_code": subject.get("subject_code", ""),
+                                    "session_name": attendance.session_name,
+                                    "session_time": attendance.session_time,
+                                    "status": attendance.status,
+                                    "date": str(attendance.date),
+                                    "method": attendance.method,
+                                    "confidence_score": attendance.confidence_score
+                                }
+                            )
+                            await notification_service.create_notification(student_notification)
+                            
+                            logger.info(f"Created attendance notification for student {attendance.student_id}")
+                            
+                        except Exception as e:
+                            logger.error(f"Failed to create attendance notification for student {attendance.student_id}: {e}")
+                            # Don't fail the attendance marking if notification creation fails
+                        
                 else:
                     results.append({
                         "student_id": attendance.student_id,
@@ -312,6 +363,28 @@ async def save_batch_attendance(
                     })
                     failed_count += 1
                     
+                    # Create notification for failed attendance marking
+                    if notification_service:
+                        try:
+                            failed_attendance_notification = NotificationCreate(
+                                recipient_id=attendance.student_id,
+                                sender_id=current_user.user_id,
+                                type=NotificationType.ATTENDANCE_FAILED,
+                                title="Attendance Marking Failed",
+                                message=f"Failed to mark attendance for {subject['name']}",
+                                data={
+                                    "reason": "Database error occurred while marking attendance",
+                                    "subject_name": subject["name"],
+                                    "subject_code": subject.get("subject_code", ""),
+                                    "session_name": attendance.session_name,
+                                    "date": str(attendance.date)
+                                }
+                            )
+                            await notification_service.create_notification(failed_attendance_notification)
+                            
+                        except Exception as e:
+                            logger.error(f"Failed to create attendance failure notification: {e}")
+                    
             except Exception as e:
                 results.append({
                     "student_id": attendance.student_id,
@@ -319,6 +392,38 @@ async def save_batch_attendance(
                     "error": str(e)
                 })
                 failed_count += 1
+        
+        # Create summary notification for the teacher
+        if saved_count > 0 and notification_service:
+            try:
+                # Get subject details for the first successful attendance record
+                first_successful = next((r for r in attendance_records if any(res["success"] for res in results if res["student_id"] == r.student_id)), None)
+                if first_successful:
+                    subject = await db.get_subject_by_id(first_successful.subject_id)
+                    if subject:
+                        teacher_notification = NotificationCreate(
+                            recipient_id=current_user.user_id,
+                            type=NotificationType.ATTENDANCE_MARKED,
+                            title="Attendance Processing Complete",
+                            message=f"Processed attendance for {saved_count} students in {subject['name']}",
+                            data={
+                                "subject_name": subject["name"],
+                                "subject_code": subject.get("subject_code", ""),
+                                "session_name": first_successful.session_name,
+                                "session_time": first_successful.session_time,
+                                "total_students": len(attendance_records),
+                                "present_count": saved_count,
+                                "failed_count": failed_count,
+                                "date": str(first_successful.date),
+                                "method": first_successful.method
+                            }
+                        )
+                        await notification_service.create_notification(teacher_notification)
+                        
+                        logger.info(f"Created attendance summary notification for teacher {current_user.user_id}")
+                        
+            except Exception as e:
+                logger.error(f"Failed to create teacher attendance summary notification: {e}")
         
         return {
             "message": f"Saved {saved_count} attendance records, {failed_count} failed",
@@ -377,8 +482,63 @@ async def mark_manual_attendance(
         
         success = await db.mark_attendance(attendance_data)
         if success:
+            # Create notification for successful manual attendance marking
+            if notification_service:
+                try:
+                    # Get student details for notification
+                    student = await db.get_user_by_id(attendance.student_id)
+                    student_name = student.get("name", "Unknown Student") if student else "Unknown Student"
+                    
+                    # Notification for the student
+                    student_notification = NotificationCreate(
+                        recipient_id=attendance.student_id,
+                        sender_id=current_user.user_id,
+                        type=NotificationType.ATTENDANCE_MARKED,
+                        title="Attendance Marked",
+                        message=f"Your attendance has been manually marked as {attendance.status} for {subject['name']}",
+                        data={
+                            "subject_name": subject["name"],
+                            "subject_code": subject.get("subject_code", ""),
+                            "session_name": attendance.session_name,
+                            "session_time": attendance.session_time,
+                            "status": attendance.status,
+                            "date": str(attendance.date),
+                            "method": "manual"
+                        }
+                    )
+                    await notification_service.create_notification(student_notification)
+                    
+                    logger.info(f"Created manual attendance notification for student {attendance.student_id}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create manual attendance notification: {e}")
+                    # Don't fail the attendance marking if notification creation fails
+            
             return {"message": "Attendance marked successfully"}
         else:
+            # Create notification for failed manual attendance marking
+            if notification_service:
+                try:
+                    failed_attendance_notification = NotificationCreate(
+                        recipient_id=attendance.student_id,
+                        sender_id=current_user.user_id,
+                        type=NotificationType.ATTENDANCE_FAILED,
+                        title="Attendance Marking Failed",
+                        message=f"Failed to manually mark attendance for {subject['name']}",
+                        data={
+                            "reason": "Database error occurred while marking attendance",
+                            "subject_name": subject["name"],
+                            "subject_code": subject.get("subject_code", ""),
+                            "session_name": attendance.session_name,
+                            "date": str(attendance.date),
+                            "method": "manual"
+                        }
+                    )
+                    await notification_service.create_notification(failed_attendance_notification)
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create manual attendance failure notification: {e}")
+            
             raise HTTPException(status_code=500, detail="Failed to mark attendance")
             
     except HTTPException:
