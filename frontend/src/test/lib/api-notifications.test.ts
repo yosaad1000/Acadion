@@ -238,6 +238,57 @@ describe('Notification API Functions', () => {
     })
   })
 
+  describe('clearAllNotifications', () => {
+    it('should call the correct endpoint with DELETE method', async () => {
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({}),
+        text: vi.fn().mockResolvedValue(''),
+        status: 200,
+        statusText: 'OK'
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      await api.clearAllNotifications()
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/notifications/clear-all',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer mock-token'
+          })
+        })
+      )
+    })
+  })
+
+  describe('deleteNotification', () => {
+    it('should call the correct endpoint with DELETE method', async () => {
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({}),
+        text: vi.fn().mockResolvedValue(''),
+        status: 200,
+        statusText: 'OK'
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const notificationId = 'test-notification-id'
+      await api.deleteNotification(notificationId)
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        `http://localhost:8000/api/notifications/${notificationId}`,
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer mock-token'
+          })
+        })
+      )
+    })
+  })
+
   describe('API error handling', () => {
     it('should handle network errors gracefully', async () => {
       ;(global.fetch as any).mockRejectedValue(new Error('Network error'))

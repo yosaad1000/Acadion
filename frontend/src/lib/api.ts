@@ -157,4 +157,10 @@ export const api = {
     method: 'PUT',
     body: JSON.stringify(preferences),
   }),
+  clearAllNotifications: () => apiCall('/api/notifications/clear-all', {
+    method: 'DELETE',
+  }),
+  deleteNotification: (notificationId: string) => apiCall(`/api/notifications/${notificationId}`, {
+    method: 'DELETE',
+  }),
 };

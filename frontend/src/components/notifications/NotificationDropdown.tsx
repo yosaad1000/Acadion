@@ -1,12 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
 import NotificationItem from './NotificationItem';
+import ConfirmationDialog from '../ui/ConfirmationDialog';
 import { 
   CheckIcon,
   EyeIcon,
   InboxIcon,
-  XMarkIcon
+  XMarkIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import './notifications.css';
 
@@ -25,10 +27,13 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     notifications, 
     unreadCount, 
     loading, 
-    markAllAsRead 
+    markAllAsRead,
+    clearAllNotifications
   } = useNotifications();
   
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   // Recent notifications (limit to 10 for dropdown)
   const recentNotifications = notifications.slice(0, 10);
@@ -48,6 +53,20 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       await markAllAsRead();
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
+    }
+  };
+
+  // Handle clear all notifications
+  const handleClearAll = async () => {
+    setIsClearing(true);
+    try {
+      await clearAllNotifications();
+      setShowClearAllDialog(false);
+      onClose(); // Close dropdown after clearing
+    } catch (error) {
+      console.error('Failed to clear all notifications:', error);
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -97,13 +116,31 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300
                   hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800
-                  transition-colors
+                  transition-colors touch-manipulation
                 "
                 data-testid="mark-all-read-button"
               >
                 <CheckIcon className="h-3 w-3 mr-1" />
                 <span className="hidden sm:inline">Mark all read</span>
                 <span className="sm:hidden">Mark all</span>
+              </button>
+            )}
+
+            {notifications.length > 0 && (
+              <button
+                onClick={() => setShowClearAllDialog(true)}
+                className="
+                  inline-flex items-center px-2 py-1 text-xs font-medium 
+                  text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300
+                  hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md
+                  focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800
+                  transition-colors touch-manipulation
+                "
+                data-testid="clear-all-button"
+              >
+                <TrashIcon className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Clear all</span>
+                <span className="sm:hidden">Clear</span>
               </button>
             )}
             
@@ -114,7 +151,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 sm:hidden inline-flex items-center p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300
                 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800
-                transition-colors
+                transition-colors touch-manipulation
               "
               data-testid="close-dropdown-button"
             >
@@ -186,6 +223,19 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           </Link>
         </div>
       )}
+
+      {/* Clear All Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showClearAllDialog}
+        onClose={() => setShowClearAllDialog(false)}
+        onConfirm={handleClearAll}
+        title="Clear All Notifications"
+        message={`Are you sure you want to clear all ${notifications.length} notification${notifications.length !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmText="Clear All"
+        cancelText="Cancel"
+        type="danger"
+        loading={isClearing}
+      />
     </div>
   );
 };

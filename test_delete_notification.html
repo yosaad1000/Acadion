@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notification Delete</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .notification-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Notification Delete Test</h1>
+    <p>This page tests if delete buttons cause page reloads. Check the console and log below.</p>
+    
+    <div class="log" id="log">
+        <strong>Event Log:</strong><br>
+        Page loaded at: <span id="load-time"></span><br>
+    </div>
+
+    <div class="notification-item">
+        <div>
+            <strong>Test Notification 1</strong><br>
+            <small>This is a test notification message</small>
+        </div>
+        <button class="delete-btn" onclick="deleteNotification(1, this)">Delete</button>
+    </div>
+
+    <div class="notification-item">
+        <div>
+            <strong>Test Notification 2</strong><br>
+            <small>Another test notification message</small>
+        </div>
+        <button class="delete-btn" onclick="deleteNotification(2, this)">Delete</button>
+    </div>
+
+    <div class="notification-item">
+        <div>
+            <strong>Test Notification 3</strong><br>
+            <small>Yet another test notification message</small>
+        </div>
+        <button class="delete-btn" onclick="deleteNotification(3, this)">Delete</button>
+    </div>
+
+    <script>
+        // Log page load time
+        document.getElementById('load-time').textContent = new Date().toLocaleTimeString();
+        
+        // Log function
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+            console.log(message);
+        }
+
+        // Test delete function
+        function deleteNotification(id, button) {
+            log(`Delete button clicked for notification ${id}`);
+            
+            // Simulate API call
+            setTimeout(() => {
+                log(`Notification ${id} deleted successfully`);
+                button.parentElement.style.opacity = '0.5';
+                button.disabled = true;
+                button.textContent = 'Deleted';
+            }, 500);
+        }
+
+        // Monitor for page reloads
+        window.addEventListener('beforeunload', function() {
+            log('Page is about to reload/unload!');
+        });
+
+        // Monitor for navigation
+        window.addEventListener('popstate', function() {
+            log('Navigation detected (popstate)');
+        });
+
+        log('Test page initialized');
+    </script>
+</body>
+</html>

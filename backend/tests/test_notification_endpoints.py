@@ -496,6 +496,57 @@ class TestNotificationEndpoints(unittest.TestCase):
         # Assertions
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertIn("Failed to delete notification", response.json()["detail"])
+    
+    def test_clear_all_notifications_success(self):
+        """Test successful clearing of all notifications"""
+        # Configure mock to return success
+        async def mock_clear_all_notifications(user_id):
+            self.assertEqual(user_id, "test-user-123")
+            return True
+        
+        self.mock_notification_service.clear_all_notifications = mock_clear_all_notifications
+        
+        # Make request
+        response = self.client.delete("/api/notifications/clear-all")
+        
+        # Debug: Print response details if test fails
+        if response.status_code != status.HTTP_200_OK:
+            print(f"Response status: {response.status_code}")
+            print(f"Response body: {response.text}")
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["message"], "All notifications cleared successfully")
+    
+    def test_clear_all_notifications_failure(self):
+        """Test clearing all notifications when service returns failure"""
+        # Configure mock to return failure
+        async def mock_clear_all_notifications(user_id):
+            return False
+        
+        self.mock_notification_service.clear_all_notifications = mock_clear_all_notifications
+        
+        # Make request
+        response = self.client.delete("/api/notifications/clear-all")
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("Failed to clear all notifications", response.json()["detail"])
+    
+    def test_clear_all_notifications_service_error(self):
+        """Test clearing all notifications when service raises exception"""
+        # Configure mock to raise exception
+        async def mock_clear_all_notifications(user_id):
+            raise Exception("Database error")
+        
+        self.mock_notification_service.clear_all_notifications = mock_clear_all_notifications
+        
+        # Make request
+        response = self.client.delete("/api/notifications/clear-all")
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("Failed to clear all notifications", response.json()["detail"])
 
 
 class TestNotificationEndpointsAuthentication(unittest.TestCase):
@@ -519,7 +570,8 @@ class TestNotificationEndpointsAuthentication(unittest.TestCase):
                 ("GET", "/api/notifications/stats"),
                 ("GET", "/api/notifications/preferences"),
                 ("PUT", "/api/notifications/preferences"),
-                ("DELETE", "/api/notifications/test-id")
+                ("DELETE", "/api/notifications/test-id"),
+                ("DELETE", "/api/notifications/clear-all")
             ]
             
             for method, endpoint in endpoints:

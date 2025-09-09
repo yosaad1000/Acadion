@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../contexts/NotificationContext';
+import ConfirmationDialog from '../ui/ConfirmationDialog';
 import { NotificationType, type Notification } from '../../types';
 import { 
   UserPlusIcon,
   CheckCircleIcon,
   XCircleIcon,
   AcademicCapIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import { getNotificationTypeStyle, getNotificationStateClasses } from '../../utils/notificationStyles';
 import './notifications.css';
@@ -17,19 +19,24 @@ interface NotificationItemProps {
   onClose?: () => void;
   isLast?: boolean;
   showFullContent?: boolean;
+  showDeleteButton?: boolean;
 }
 
 const NotificationItem: React.FC<NotificationItemProps> = ({ 
   notification, 
   onClose,
   isLast = false,
-  showFullContent = false
+  showFullContent = false,
+  showDeleteButton = true
 }) => {
-  const { markAsRead } = useNotifications();
+  const { markAsRead, deleteNotification } = useNotifications();
+  const navigate = useNavigate();
 
-  // State for animations
+  // State for animations and dialogs
   const [isNew, setIsNew] = useState(false);
   const [justMarkedRead, setJustMarkedRead] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check if notification is new (created within last 30 seconds)
   useEffect(() => {
@@ -43,6 +50,17 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       return () => clearTimeout(timer);
     }
   }, [notification.created_at, notification.is_read]);
+
+  // Debug: Monitor for page unload events
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      console.warn('⚠️ Page is about to reload/unload! This might be caused by the delete button.');
+      console.trace('Stack trace for page unload');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Get notification icon based on type with enhanced styling
   const getNotificationIcon = (type: NotificationType) => {
@@ -133,9 +151,52 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       }
     }
     
-    if (onClose) {
-      onClose();
+    // Handle navigation
+    handleNavigation();
+  };
+
+  // Handle delete notification
+  const handleDelete = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault(); // Prevent any default behavior
+      e.stopPropagation(); // Prevent triggering the notification click
     }
+    
+    setIsDeleting(true);
+    try {
+      await deleteNotification(notification.id);
+      setShowDeleteDialog(false);
+      console.log('✅ Notification deleted successfully');
+    } catch (error) {
+      console.error('❌ Failed to delete notification:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Handle delete button click
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    console.log('🗑️ Delete button clicked for notification:', notification.id);
+    e.preventDefault(); // Prevent any default behavior
+    e.stopPropagation(); // Prevent triggering the notification click
+    console.log('✅ Event prevented and stopped');
+    setShowDeleteDialog(true);
+  };
+
+  // Handle notification content click (for navigation)
+  const handleContentClick = async (e: React.MouseEvent) => {
+    console.log('📱 Notification content clicked:', notification.id);
+    
+    // Don't navigate if clicking on delete button or its container
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-testid="delete-notification-button"]') || 
+        target.closest('.delete-button-container')) {
+      console.log('🚫 Click ignored - delete button area');
+      return;
+    }
+    
+    console.log('✅ Proceeding with notification click');
+    await handleClick();
   };
 
   const actionLink = getActionLink(notification);
@@ -146,14 +207,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   const content = (
     <div
       className={`
-        px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer
+        group px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer
         ${stateClasses}
         ${!isLast ? 'border-b border-gray-100 dark:border-gray-700' : ''}
         ${justMarkedRead ? 'notification-item-read' : ''}
         hover:shadow-sm hover:scale-[1.01] transform
         active:scale-[0.99]
       `}
-      onClick={handleClick}
+      onClick={handleContentClick}
       data-testid="notification-item"
     >
       <div className="flex items-start space-x-3">
@@ -205,14 +266,35 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               )}
             </div>
 
-            {/* Unread indicator and time */}
+            {/* Actions and indicators */}
             <div className="flex flex-col items-end space-y-1 ml-2">
-              {!notification.is_read && (
-                <div 
-                  className="h-2.5 w-2.5 bg-blue-500 rounded-full flex-shrink-0 notification-unread-pulse shadow-lg"
-                  data-testid="unread-indicator"
-                />
-              )}
+              <div className="flex items-center space-x-2">
+                {showDeleteButton && (
+                  <div className="delete-button-container">
+                    <button
+                      onClick={handleDeleteClick}
+                      className="
+                        opacity-0 group-hover:opacity-100 p-1 rounded-md
+                        text-gray-400 hover:text-red-600 dark:hover:text-red-400
+                        hover:bg-red-50 dark:hover:bg-red-900/20
+                        focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800
+                        transition-all duration-200 touch-manipulation
+                        sm:opacity-100 sm:hover:opacity-100
+                      "
+                      aria-label="Delete notification"
+                      data-testid="delete-notification-button"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+                {!notification.is_read && (
+                  <div 
+                    className="h-2.5 w-2.5 bg-blue-500 rounded-full flex-shrink-0 notification-unread-pulse shadow-lg"
+                    data-testid="unread-indicator"
+                  />
+                )}
+              </div>
               <span className={`
                 text-xs flex-shrink-0 transition-colors duration-300
                 ${!notification.is_read 
@@ -229,16 +311,40 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
     </div>
   );
 
-  // Wrap with Link if there's an action link, otherwise return plain div
-  if (actionLink) {
-    return (
-      <Link to={actionLink} className="block">
-        {content}
-      </Link>
-    );
-  }
+  // Create a custom navigation handler instead of using Link wrapper
+  const handleNavigation = () => {
+    if (actionLink) {
+      if (onClose) {
+        onClose(); // Close dropdown first
+      }
+      // Use setTimeout to ensure dropdown closes before navigation
+      setTimeout(() => {
+        navigate(actionLink);
+      }, 100);
+    }
+  };
 
-  return content;
+  // Don't wrap in Link - handle navigation manually to avoid conflicts
+  const notificationContent = content;
+
+  return (
+    <>
+      {notificationContent}
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={() => handleDelete()}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+        loading={isDeleting}
+      />
+    </>
+  );
 };
 
 export default NotificationItem;

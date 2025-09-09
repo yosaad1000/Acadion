@@ -28,6 +28,8 @@ interface NotificationContextType {
   error: string | null;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
   updatePreferences: (preferences: NotificationPreference[]) => Promise<void>;
   refreshNotifications: () => Promise<void>;
   refreshPreferences: () => Promise<void>;
@@ -284,6 +286,56 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [notifications, unreadCount]);
 
+  // Clear all notifications with enhanced error handling
+  const clearAllNotifications = useCallback(async () => {
+    // Optimistic update
+    const originalNotifications = notifications;
+    const originalUnreadCount = unreadCount;
+    setNotifications([]);
+    setUnreadCount(0);
+
+    try {
+      console.log('🗑️ Clearing all notifications...');
+      await notificationApiService.clearAllNotifications();
+      console.log('✅ All notifications cleared');
+    } catch (error: any) {
+      console.error('❌ Error clearing all notifications:', error);
+      
+      // Revert optimistic update on error
+      setNotifications(originalNotifications);
+      setUnreadCount(originalUnreadCount);
+      
+      // Set error message
+      setError(error.message || 'Failed to clear all notifications');
+      throw error;
+    }
+  }, [notifications, unreadCount]);
+
+  // Delete individual notification with enhanced error handling
+  const deleteNotification = useCallback(async (id: string) => {
+    // Optimistic update
+    const originalNotifications = notifications;
+    const updatedNotifications = notifications.filter(n => n.id !== id);
+    setNotifications(updatedNotifications);
+    setUnreadCount(calculateUnreadCount(updatedNotifications));
+
+    try {
+      console.log('🗑️ Deleting notification:', id);
+      await notificationApiService.deleteNotification(id);
+      console.log('✅ Notification deleted');
+    } catch (error: any) {
+      console.error('❌ Error deleting notification:', error);
+      
+      // Revert optimistic update on error
+      setNotifications(originalNotifications);
+      setUnreadCount(calculateUnreadCount(originalNotifications));
+      
+      // Set error message
+      setError(error.message || 'Failed to delete notification');
+      throw error;
+    }
+  }, [notifications, calculateUnreadCount]);
+
   // Update notification preferences with enhanced error handling
   const updatePreferences = useCallback(async (newPreferences: NotificationPreference[]) => {
     // Optimistic update
@@ -340,6 +392,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         error,
         markAsRead,
         markAllAsRead,
+        clearAllNotifications,
+        deleteNotification,
         updatePreferences,
         refreshNotifications,
         refreshPreferences,

@@ -3,15 +3,13 @@ import { notificationApiService, getJsonResponse } from '../../services/notifica
 import { createNetworkError } from '../../utils/errorHandling';
 
 // Mock Supabase
-const mockSupabase = {
-  auth: {
-    getSession: vi.fn(),
-    refreshSession: vi.fn()
-  }
-};
-
 vi.mock('../../lib/supabase', () => ({
-  supabase: mockSupabase
+  supabase: {
+    auth: {
+      getSession: vi.fn(),
+      refreshSession: vi.fn()
+    }
+  }
 }));
 
 // Mock fetch
@@ -23,12 +21,15 @@ describe('notificationApiService', () => {
     access_token: 'mock-token-123'
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     
+    // Get the mocked supabase
+    const { supabase } = await import('../../lib/supabase');
+    
     // Default successful session mock
-    mockSupabase.auth.getSession.mockResolvedValue({
+    (supabase.auth.getSession as any).mockResolvedValue({
       data: { session: mockSession }
     });
     
@@ -91,26 +92,29 @@ describe('notificationApiService', () => {
     });
 
     it('should refresh session on 401 error', async () => {
+      const { supabase } = await import('../../lib/supabase');
       const newSession = { access_token: 'new-token-456' };
       
       mockFetch
         .mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }))
         .mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
       
-      mockSupabase.auth.refreshSession.mockResolvedValue({
+      (supabase.auth.refreshSession as any).mockResolvedValue({
         data: { session: newSession }
       });
 
       const response = await notificationApiService.getNotifications();
 
-      expect(mockSupabase.auth.refreshSession).toHaveBeenCalled();
+      expect(supabase.auth.refreshSession).toHaveBeenCalled();
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(response.status).toBe(200);
     });
 
     it('should throw error when no session token available', async () => {
-      mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
-      mockSupabase.auth.refreshSession.mockResolvedValue({ data: { session: null } });
+      const { supabase } = await import('../../lib/supabase');
+      
+      (supabase.auth.getSession as any).mockResolvedValue({ data: { session: null } });
+      (supabase.auth.refreshSession as any).mockResolvedValue({ data: { session: null } });
 
       await expect(notificationApiService.getNotifications()).rejects.toThrow('No valid session token');
     });
@@ -213,6 +217,60 @@ describe('notificationApiService', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(3); // Initial + 2 retries (critical has more retries)
       expect(response.status).toBe(200);
+    });
+  });
+
+  describe('clearAllNotifications', () => {
+    it('should make DELETE request to clear all notifications', async () => {
+      await notificationApiService.clearAllNotifications();
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/notifications/clear-all',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({
+            'Authorization': `Bearer ${mockSession.access_token}`,
+            'Content-Type': 'application/json'
+          })
+        })
+      );
+    });
+
+    it('should use write retry options', async () => {
+      mockFetch
+        .mockRejectedValueOnce(createNetworkError('Network error', 500, true))
+        .mockResolvedValueOnce(new Response('', { status: 200 }));
+
+      await notificationApiService.clearAllNotifications();
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('deleteNotification', () => {
+    it('should make DELETE request to delete specific notification', async () => {
+      await notificationApiService.deleteNotification('notification-123');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/notifications/notification-123',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({
+            'Authorization': `Bearer ${mockSession.access_token}`,
+            'Content-Type': 'application/json'
+          })
+        })
+      );
+    });
+
+    it('should use write retry options', async () => {
+      mockFetch
+        .mockRejectedValueOnce(createNetworkError('Network error', 500, true))
+        .mockResolvedValueOnce(new Response('', { status: 200 }));
+
+      await notificationApiService.deleteNotification('notification-123');
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
   });
 

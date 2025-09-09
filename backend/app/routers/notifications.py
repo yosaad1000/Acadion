@@ -190,13 +190,40 @@ async def update_notification_preferences(
             detail="Failed to update notification preferences"
         )
 
+@router.delete("/clear-all")
+async def clear_all_notifications(
+    current_user: UserResponse = Depends(get_current_user),
+    notification_service: NotificationService = Depends(get_notification_service)
+):
+    """Clear all notifications for the current user"""
+    try:
+        success = await notification_service.clear_all_notifications(current_user.user_id)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to clear all notifications"
+            )
+        
+        logger.info(f"All notifications cleared for user {current_user.user_id}")
+        return {"message": "All notifications cleared successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Clear all notifications error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to clear all notifications"
+        )
+
 @router.delete("/{notification_id}")
 async def delete_notification(
     notification_id: str,
     current_user: UserResponse = Depends(get_current_user),
     notification_service: NotificationService = Depends(get_notification_service)
 ):
-    """Delete a notification (currently implemented as mark as read)"""
+    """Delete a specific notification"""
     try:
         success = await notification_service.delete_notification(
             notification_id=notification_id,

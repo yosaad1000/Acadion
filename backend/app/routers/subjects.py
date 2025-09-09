@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List
+from datetime import datetime
 from app.models.subject import SubjectCreate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse
 from app.models.user import UserResponse
 from app.models.notification import NotificationCreate, NotificationType
@@ -48,6 +49,34 @@ async def create_subject(
         created_subject = await db.create_subject(subject_data)
         if not created_subject:
             raise HTTPException(status_code=500, detail="Failed to create subject")
+        
+        # Create notification for successful class creation
+        notification_service = get_notification_service()
+        if notification_service:
+            try:
+                class_created_notification = NotificationCreate(
+                    recipient_id=current_user.user_id,
+                    type=NotificationType.CLASS_JOINED,  # Reusing this type for class creation confirmation
+                    title="Class Created Successfully",
+                    message=f"Your class '{created_subject['name']}' has been created successfully",
+                    data={
+                        "subject_name": created_subject["name"],
+                        "subject_code": created_subject.get("subject_code", ""),
+                        "invite_code": created_subject["invite_code"],
+                        "teacher_name": current_user.name,
+                        "created_at": created_subject["created_at"],
+                        "action": "class_created"
+                    }
+                )
+                success = await notification_service.create_notification(class_created_notification)
+                if success:
+                    logger.info(f"Created class creation notification for teacher {current_user.user_id}")
+                else:
+                    logger.warning(f"Failed to create class creation notification for teacher {current_user.user_id}")
+                    
+            except Exception as e:
+                logger.error(f"Failed to create class creation notification: {e}")
+                # Don't fail the class creation if notification fails
         
         return SubjectResponse(
             subject_id=created_subject["subject_id"],
@@ -122,12 +151,16 @@ async def join_subject(
                         data={
                             "reason": "Invalid invite code",
                             "invite_code": join_data.invite_code,
-                            "attempted_at": None
+                            "attempted_at": datetime.utcnow().isoformat()
                         }
                     )
-                    await notification_service.create_notification(failed_join_notification)
+                    success = await notification_service.create_notification(failed_join_notification)
+                    if success:
+                        logger.info(f"✅ Created join failure notification for {current_user.user_id}")
+                    else:
+                        logger.warning(f"⚠️ Failed to create join failure notification for {current_user.user_id}")
                 except Exception as e:
-                    logger.error(f"Failed to create join failure notification: {e}")
+                    logger.error(f"❌ Exception creating join failure notification: {e}")
             
             raise HTTPException(status_code=404, detail="Invalid invite code")
         
@@ -147,12 +180,17 @@ async def join_subject(
                             "reason": "Already enrolled in this subject",
                             "subject_name": subject["name"],
                             "subject_code": subject["subject_code"],
-                            "teacher_name": subject["teacher_name"]
+                            "teacher_name": subject["teacher_name"],
+                            "attempted_at": datetime.utcnow().isoformat()
                         }
                     )
-                    await notification_service.create_notification(already_enrolled_notification)
+                    success = await notification_service.create_notification(already_enrolled_notification)
+                    if success:
+                        logger.info(f"✅ Created already enrolled notification for {current_user.user_id}")
+                    else:
+                        logger.warning(f"⚠️ Failed to create already enrolled notification for {current_user.user_id}")
                 except Exception as e:
-                    logger.error(f"Failed to create already enrolled notification: {e}")
+                    logger.error(f"❌ Exception creating already enrolled notification: {e}")
             
             raise HTTPException(status_code=400, detail="Already enrolled in this subject")
         
@@ -198,7 +236,11 @@ async def join_subject(
                         "joined_at": enrollment["enrolled_at"]
                     }
                 )
-                await notification_service.create_notification(student_notification)
+                student_success = await notification_service.create_notification(student_notification)
+                if student_success:
+                    logger.info(f"✅ Created student notification for {current_user.user_id}")
+                else:
+                    logger.warning(f"⚠️ Failed to create student notification for {current_user.user_id}")
                 
                 # Notification for the teacher (student joined class)
                 teacher_notification = NotificationCreate(
@@ -215,12 +257,19 @@ async def join_subject(
                         "joined_at": enrollment["enrolled_at"]
                     }
                 )
-                await notification_service.create_notification(teacher_notification)
+                teacher_success = await notification_service.create_notification(teacher_notification)
+                if teacher_success:
+                    logger.info(f"✅ Created teacher notification for {subject['teacher_id']}")
+                else:
+                    logger.warning(f"⚠️ Failed to create teacher notification for {subject['teacher_id']}")
                 
-                logger.info(f"Created enrollment notifications for student {current_user.user_id} and teacher {subject['teacher_id']}")
+                logger.info(f"Enrollment notification creation completed - Student: {student_success}, Teacher: {teacher_success}")
                 
             except Exception as e:
-                logger.error(f"Failed to create enrollment notifications: {e}")
+                logger.error(f"❌ Exception during enrollment notification creation: {e}")
+                logger.error(f"   - Student ID: {current_user.user_id}")
+                logger.error(f"   - Teacher ID: {subject['teacher_id']}")
+                logger.error(f"   - Subject: {subject['name']}")
                 # Don't fail the enrollment if notification creation fails
         
         return SubjectEnrollmentResponse(

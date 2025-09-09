@@ -168,6 +168,24 @@ export const notificationApiService = {
   },
 
   /**
+   * Clear all notifications for the current user
+   */
+  async clearAllNotifications(): Promise<Response> {
+    return enhancedApiCall('/api/notifications/clear-all', {
+      method: 'DELETE',
+    }, 'write');
+  },
+
+  /**
+   * Delete a specific notification
+   */
+  async deleteNotification(notificationId: string): Promise<Response> {
+    return enhancedApiCall(`/api/notifications/${notificationId}`, {
+      method: 'DELETE',
+    }, 'write');
+  },
+
+  /**
    * Get circuit breaker status for monitoring
    */
   getCircuitBreakerStatus() {

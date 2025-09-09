@@ -47,6 +47,8 @@ vi.mock('@heroicons/react/24/outline', () => ({
   CheckIcon: ({ className, ...props }: any) => <svg className={className} data-testid="check-icon" {...props} />,
   EyeIcon: ({ className, ...props }: any) => <svg className={className} data-testid="eye-icon" {...props} />,
   InboxIcon: ({ className, ...props }: any) => <svg className={className} data-testid="inbox-icon" {...props} />,
+  XMarkIcon: ({ className, ...props }: any) => <svg className={className} data-testid="x-mark-icon" {...props} />,
+  TrashIcon: ({ className, ...props }: any) => <svg className={className} data-testid="trash-icon" {...props} />,
   UserPlusIcon: ({ className, ...props }: any) => <svg className={className} data-testid="user-plus-icon" {...props} />,
   CheckCircleIcon: ({ className, ...props }: any) => <svg className={className} data-testid="check-circle-icon" {...props} />,
   XCircleIcon: ({ className, ...props }: any) => <svg className={className} data-testid="x-circle-icon" {...props} />,
