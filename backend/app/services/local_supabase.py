@@ -266,19 +266,31 @@ class LocalSupabase:
         """Get subjects created by a teacher"""
         try:
             async with httpx.AsyncClient() as client:
+                # First get the subjects
                 response = await client.get(
                     f"{self.base_url}/rest/v1/subjects",
                     headers=self.headers,
                     params={
                         "teacher_id": f"eq.{teacher_id}",
-                        "select": "*,teacher:users!teacher_id(name)"
+                        "select": "*"
                     }
                 )
                 if response.status_code == 200:
                     subjects = response.json()
-                    # Add teacher name and student count
+                    # Get teacher name from users table and add student count
                     for subject in subjects:
-                        subject["teacher_name"] = subject.get("teacher", {}).get("name", "")
+                        # Get teacher name by looking up the teacher_id in users table
+                        teacher_response = await client.get(
+                            f"{self.base_url}/rest/v1/users",
+                            headers=self.headers,
+                            params={"auth_user_id": f"eq.{subject['teacher_id']}"}
+                        )
+                        if teacher_response.status_code == 200:
+                            teacher_data = teacher_response.json()
+                            subject["teacher_name"] = teacher_data[0]["name"] if teacher_data else "Unknown Teacher"
+                        else:
+                            subject["teacher_name"] = "Unknown Teacher"
+                        
                         subject["student_count"] = await self.get_subject_student_count(subject["subject_id"])
                     return subjects
                 return []
@@ -296,7 +308,7 @@ class LocalSupabase:
                     params={
                         "student_id": f"eq.{student_id}",
                         "is_active": "eq.true",
-                        "select": "*,subject:subjects(*,teacher:users!teacher_id(name))"
+                        "select": "*,subject:subjects(*)"
                     }
                 )
                 if response.status_code == 200:
@@ -304,7 +316,19 @@ class LocalSupabase:
                     subjects = []
                     for enrollment in enrollments:
                         subject = enrollment["subject"]
-                        subject["teacher_name"] = subject.get("teacher", {}).get("name", "")
+                        
+                        # Get teacher name by looking up the teacher_id in users table
+                        teacher_response = await client.get(
+                            f"{self.base_url}/rest/v1/users",
+                            headers=self.headers,
+                            params={"auth_user_id": f"eq.{subject['teacher_id']}"}
+                        )
+                        if teacher_response.status_code == 200:
+                            teacher_data = teacher_response.json()
+                            subject["teacher_name"] = teacher_data[0]["name"] if teacher_data else "Unknown Teacher"
+                        else:
+                            subject["teacher_name"] = "Unknown Teacher"
+                        
                         subject["student_count"] = await self.get_subject_student_count(subject["subject_id"])
                         subjects.append(subject)
                     return subjects
@@ -323,14 +347,24 @@ class LocalSupabase:
                     params={
                         "invite_code": f"eq.{invite_code}",
                         "is_active": "eq.true",
-                        "select": "*,teacher:users!teacher_id(name)"
+                        "select": "*"
                     }
                 )
                 if response.status_code == 200:
                     subjects = response.json()
                     if subjects:
                         subject = subjects[0]
-                        subject["teacher_name"] = subject.get("teacher", {}).get("name", "")
+                        # Get teacher name by looking up the teacher_id in users table
+                        teacher_response = await client.get(
+                            f"{self.base_url}/rest/v1/users",
+                            headers=self.headers,
+                            params={"auth_user_id": f"eq.{subject['teacher_id']}"}
+                        )
+                        if teacher_response.status_code == 200:
+                            teacher_data = teacher_response.json()
+                            subject["teacher_name"] = teacher_data[0]["name"] if teacher_data else "Unknown Teacher"
+                        else:
+                            subject["teacher_name"] = "Unknown Teacher"
                         return subject
                 return None
         except Exception as e:
@@ -346,20 +380,49 @@ class LocalSupabase:
                     headers=self.headers,
                     params={
                         "subject_id": f"eq.{subject_id}",
-                        "select": "*,teacher:users!teacher_id(name)"
+                        "select": "*"
                     }
                 )
                 if response.status_code == 200:
                     subjects = response.json()
                     if subjects:
                         subject = subjects[0]
-                        # Add teacher_name field
-                        subject["teacher_name"] = subject.get("teacher", {}).get("name", "Unknown Teacher")
+                        # Get teacher name by looking up the teacher_id in users table
+                        teacher_response = await client.get(
+                            f"{self.base_url}/rest/v1/users",
+                            headers=self.headers,
+                            params={"auth_user_id": f"eq.{subject['teacher_id']}"}
+                        )
+                        if teacher_response.status_code == 200:
+                            teacher_data = teacher_response.json()
+                            subject["teacher_name"] = teacher_data[0]["name"] if teacher_data else "Unknown Teacher"
+                        else:
+                            subject["teacher_name"] = "Unknown Teacher"
                         return subject
                     return None
                 return None
         except Exception as e:
             logger.error(f"Error getting subject by ID: {e}")
+            return None
+    
+    async def get_subject_by_code(self, subject_code: str) -> Optional[Dict[str, Any]]:
+        """Get subject by subject code"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/subjects",
+                    headers=self.headers,
+                    params={
+                        "subject_code": f"eq.{subject_code}",
+                        "select": "*"
+                    }
+                )
+                if response.status_code == 200:
+                    subjects = response.json()
+                    return subjects[0] if subjects else None
+                return None
+        except Exception as e:
+            logger.error(f"Error getting subject by code: {e}")
             return None
     
     async def is_student_enrolled(self, subject_id: str, student_id: str) -> bool:

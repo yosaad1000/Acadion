@@ -28,6 +28,7 @@ class GoogleAuthRequest(BaseModel):
 
 class UserResponse(BaseModel):
     user_id: str
+    auth_user_id: str  # Added for database foreign key references
     email: str
     name: str
     user_type: UserType
