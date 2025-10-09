@@ -31,19 +31,56 @@ def get_notification_service():
 @router.post("", response_model=SubjectResponse)
 async def create_subject(
     subject: SubjectCreate,
-    current_user = Depends(get_current_user)
+    current_user: UserResponse = Depends(get_current_user)
 ):
     """Create a new subject/classroom (Teachers only)"""
     try:
+        logger.info(f"🎯 Creating subject for user: {current_user.email} (type: {current_user.user_type})")
+        logger.info(f"🔑 User auth_user_id: {current_user.auth_user_id}")
+        
         if current_user.user_type != "teacher":
             raise HTTPException(status_code=403, detail="Only teachers can create subjects")
+        
+        # Generate unique codes
+        import secrets
+        import string
+        
+        # Generate unique subject code (SUB + 6 digits)
+        subject_code = None
+        counter = 1
+        while subject_code is None:
+            potential_code = f"SUB{counter:06d}"
+            # Check if this code already exists
+            existing = await db.get_subject_by_code(potential_code)
+            if not existing:
+                subject_code = potential_code
+            else:
+                counter += 1
+        
+        # Generate unique invite code (8 random alphanumeric characters)
+        invite_code = None
+        max_attempts = 10
+        for _ in range(max_attempts):
+            potential_invite = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+            # Check if this invite code already exists
+            existing = await db.get_subject_by_invite_code(potential_invite)
+            if not existing:
+                invite_code = potential_invite
+                break
+        
+        if invite_code is None:
+            raise HTTPException(status_code=500, detail="Failed to generate unique invite code")
         
         # Create subject data
         subject_data = {
             "name": subject.name,
             "description": subject.description,
-            "teacher_id": current_user.user_id
+            "teacher_id": current_user.auth_user_id,
+            "subject_code": subject_code,
+            "invite_code": invite_code
         }
+        
+        logger.info(f"📝 Subject data to create: {subject_data}")
         
         # Insert subject into database
         created_subject = await db.create_subject(subject_data)
@@ -55,7 +92,7 @@ async def create_subject(
         if notification_service:
             try:
                 class_created_notification = NotificationCreate(
-                    recipient_id=current_user.user_id,
+                    recipient_id=current_user.auth_user_id,
                     type=NotificationType.CLASS_JOINED,  # Reusing this type for class creation confirmation
                     title="Class Created Successfully",
                     message=f"Your class '{created_subject['name']}' has been created successfully",
@@ -70,9 +107,9 @@ async def create_subject(
                 )
                 success = await notification_service.create_notification(class_created_notification)
                 if success:
-                    logger.info(f"Created class creation notification for teacher {current_user.user_id}")
+                    logger.info(f"Created class creation notification for teacher {current_user.auth_user_id}")
                 else:
-                    logger.warning(f"Failed to create class creation notification for teacher {current_user.user_id}")
+                    logger.warning(f"Failed to create class creation notification for teacher {current_user.auth_user_id}")
                     
             except Exception as e:
                 logger.error(f"Failed to create class creation notification: {e}")
@@ -83,7 +120,7 @@ async def create_subject(
             subject_code=created_subject.get("subject_code", ""),
             name=created_subject["name"],
             description=created_subject.get("description"),
-            teacher_id=current_user.user_id,
+            teacher_id=current_user.auth_user_id,
             teacher_name=current_user.name,
             invite_code=created_subject["invite_code"],
             is_active=created_subject["is_active"],
@@ -102,9 +139,9 @@ async def get_my_subjects(current_user: UserResponse = Depends(get_current_user)
     """Get subjects - teachers see their created subjects, students see enrolled subjects"""
     try:
         if current_user.user_type == "teacher":
-            subjects = await db.get_teacher_subjects(current_user.user_id)
+            subjects = await db.get_teacher_subjects(current_user.auth_user_id)
         else:
-            subjects = await db.get_student_subjects(current_user.user_id)
+            subjects = await db.get_student_subjects(current_user.auth_user_id)
         
         return [
             SubjectResponse(
@@ -144,7 +181,7 @@ async def join_subject(
             if notification_service:
                 try:
                     failed_join_notification = NotificationCreate(
-                        recipient_id=current_user.user_id,
+                        recipient_id=current_user.auth_user_id,
                         type=NotificationType.JOIN_FAILED,
                         title="Failed to Join Class",
                         message="The invite code you entered is invalid or expired",
@@ -156,23 +193,23 @@ async def join_subject(
                     )
                     success = await notification_service.create_notification(failed_join_notification)
                     if success:
-                        logger.info(f"✅ Created join failure notification for {current_user.user_id}")
+                        logger.info(f"✅ Created join failure notification for {current_user.auth_user_id}")
                     else:
-                        logger.warning(f"⚠️ Failed to create join failure notification for {current_user.user_id}")
+                        logger.warning(f"⚠️ Failed to create join failure notification for {current_user.auth_user_id}")
                 except Exception as e:
                     logger.error(f"❌ Exception creating join failure notification: {e}")
             
             raise HTTPException(status_code=404, detail="Invalid invite code")
         
         # Check if already enrolled
-        is_enrolled = await db.is_student_enrolled(subject["subject_id"], current_user.user_id)
+        is_enrolled = await db.is_student_enrolled(subject["subject_id"], current_user.auth_user_id)
         if is_enrolled:
             # Create notification for already enrolled attempt
             notification_service = get_notification_service()
             if notification_service:
                 try:
                     already_enrolled_notification = NotificationCreate(
-                        recipient_id=current_user.user_id,
+                        recipient_id=current_user.auth_user_id,
                         type=NotificationType.JOIN_FAILED,
                         title="Already Enrolled",
                         message=f"You are already enrolled in {subject['name']}",
@@ -186,16 +223,16 @@ async def join_subject(
                     )
                     success = await notification_service.create_notification(already_enrolled_notification)
                     if success:
-                        logger.info(f"✅ Created already enrolled notification for {current_user.user_id}")
+                        logger.info(f"✅ Created already enrolled notification for {current_user.auth_user_id}")
                     else:
-                        logger.warning(f"⚠️ Failed to create already enrolled notification for {current_user.user_id}")
+                        logger.warning(f"⚠️ Failed to create already enrolled notification for {current_user.auth_user_id}")
                 except Exception as e:
                     logger.error(f"❌ Exception creating already enrolled notification: {e}")
             
             raise HTTPException(status_code=400, detail="Already enrolled in this subject")
         
         # Enroll student
-        enrollment = await db.enroll_student(subject["subject_id"], current_user.user_id)
+        enrollment = await db.enroll_student(subject["subject_id"], current_user.auth_user_id)
         if not enrollment:
             raise HTTPException(status_code=500, detail="Failed to join subject")
         
@@ -204,17 +241,17 @@ async def join_subject(
             from app.services.face_recognition import face_recognition_service
             
             # Get all subjects the student is now enrolled in
-            all_subjects = await db.get_student_subjects(current_user.user_id)
+            all_subjects = await db.get_student_subjects(current_user.auth_user_id)
             subject_ids = [subj['subject_id'] for subj in all_subjects]
             
             # Update the face encoding metadata in Pinecone
-            success = face_recognition_service.update_face_encoding_subjects(current_user.user_id, subject_ids)
+            success = face_recognition_service.update_face_encoding_subjects(current_user.auth_user_id, subject_ids)
             if success:
-                logger.info(f"Updated face encoding subjects for student {current_user.user_id}: {subject_ids}")
+                logger.info(f"Updated face encoding subjects for student {current_user.auth_user_id}: {subject_ids}")
             else:
-                logger.warning(f"Face encoding not found for student {current_user.user_id} - they may need to register their face")
+                logger.warning(f"Face encoding not found for student {current_user.auth_user_id} - they may need to register their face")
         except Exception as e:
-            logger.warning(f"Failed to update face encoding subjects for student {current_user.user_id}: {e}")
+            logger.warning(f"Failed to update face encoding subjects for student {current_user.auth_user_id}: {e}")
             # Don't fail the enrollment if face encoding update fails
         
         # Create notifications for successful enrollment
@@ -223,7 +260,7 @@ async def join_subject(
             try:
                 # Notification for the student (class joined successfully)
                 student_notification = NotificationCreate(
-                    recipient_id=current_user.user_id,
+                    recipient_id=current_user.auth_user_id,
                     sender_id=subject["teacher_id"],
                     type=NotificationType.CLASS_JOINED,
                     title="Successfully Joined Class",
@@ -238,20 +275,20 @@ async def join_subject(
                 )
                 student_success = await notification_service.create_notification(student_notification)
                 if student_success:
-                    logger.info(f"✅ Created student notification for {current_user.user_id}")
+                    logger.info(f"✅ Created student notification for {current_user.auth_user_id}")
                 else:
-                    logger.warning(f"⚠️ Failed to create student notification for {current_user.user_id}")
+                    logger.warning(f"⚠️ Failed to create student notification for {current_user.auth_user_id}")
                 
                 # Notification for the teacher (student joined class)
                 teacher_notification = NotificationCreate(
                     recipient_id=subject["teacher_id"],
-                    sender_id=current_user.user_id,
+                    sender_id=current_user.auth_user_id,
                     type=NotificationType.STUDENT_JOINED,
                     title="New Student Joined",
                     message=f"{current_user.name} joined your class {subject['name']}",
                     data={
                         "student_name": current_user.name,
-                        "student_id": current_user.user_id,
+                        "student_id": current_user.auth_user_id,
                         "subject_name": subject["name"],
                         "subject_code": subject["subject_code"],
                         "joined_at": enrollment["enrolled_at"]
@@ -267,7 +304,7 @@ async def join_subject(
                 
             except Exception as e:
                 logger.error(f"❌ Exception during enrollment notification creation: {e}")
-                logger.error(f"   - Student ID: {current_user.user_id}")
+                logger.error(f"   - Student ID: {current_user.auth_user_id}")
                 logger.error(f"   - Teacher ID: {subject['teacher_id']}")
                 logger.error(f"   - Subject: {subject['name']}")
                 # Don't fail the enrollment if notification creation fails
@@ -299,7 +336,7 @@ async def get_subject_students(
         
         # Verify teacher owns this subject
         subject = await db.get_subject_by_id(subject_id)
-        if not subject or subject["teacher_id"] != current_user.user_id:
+        if not subject or subject["teacher_id"] != current_user.auth_user_id:
             raise HTTPException(status_code=403, detail="Access denied")
         
         students = await db.get_subject_students(subject_id)
@@ -324,10 +361,10 @@ async def get_subject(
         
         # Check access permissions
         if current_user.user_type == "teacher":
-            if subject["teacher_id"] != current_user.user_id:
+            if subject["teacher_id"] != current_user.auth_user_id:
                 raise HTTPException(status_code=403, detail="Access denied")
         elif current_user.user_type == "student":
-            is_enrolled = await db.is_student_enrolled(subject_id, current_user.user_id)
+            is_enrolled = await db.is_student_enrolled(subject_id, current_user.auth_user_id)
             if not is_enrolled:
                 raise HTTPException(status_code=403, detail="Not enrolled in this subject")
         
@@ -362,7 +399,7 @@ async def delete_subject(
         
         # Verify teacher owns this subject
         subject = await db.get_subject_by_id(subject_id)
-        if not subject or subject["teacher_id"] != current_user.user_id:
+        if not subject or subject["teacher_id"] != current_user.auth_user_id:
             raise HTTPException(status_code=403, detail="Access denied")
         
         success = await db.delete_subject(subject_id)

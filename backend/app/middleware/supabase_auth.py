@@ -58,6 +58,7 @@ async def get_current_user_supabase(credentials: HTTPAuthorizationCredentials = 
         
         user_response = UserResponse(
             user_id=user_data["user_id"],
+            auth_user_id=user_data["auth_user_id"],  # Pass as proper field
             email=user_data["email"],
             name=user_data["name"],
             user_type=UserType(user_data.get("active_role", "student")),  # Use active_role from new schema
