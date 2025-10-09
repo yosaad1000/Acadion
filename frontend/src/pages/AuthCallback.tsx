@@ -11,14 +11,64 @@ const AuthCallback: React.FC = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle the OAuth callback
-        const { data, error } = await supabase.auth.getSession();
+        console.log('🔄 Starting auth callback handling...');
         
-        if (error) {
-          throw error;
+        // Handle OAuth callback - check URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasAuthParams = urlParams.has('code') || urlParams.has('access_token');
+        
+        console.log('🔍 URL params check:', { 
+          hasAuthParams, 
+          code: urlParams.has('code'), 
+          access_token: urlParams.has('access_token'),
+          error: urlParams.get('error'),
+          error_description: urlParams.get('error_description'),
+          fullURL: window.location.href,
+          search: window.location.search,
+          hash: window.location.hash
+        });
+
+        let session = null;
+
+        // Check if there's an error in the URL first
+        const urlError = urlParams.get('error');
+        const urlErrorDescription = urlParams.get('error_description');
+        
+        if (urlError) {
+          console.error('❌ OAuth error in URL:', { error: urlError, description: urlErrorDescription });
+          throw new Error(`OAuth error: ${urlError} - ${urlErrorDescription}`);
         }
 
-        if (data.session) {
+        if (hasAuthParams) {
+          // If we have auth parameters in URL, let Supabase handle the callback
+          console.log('📥 Processing OAuth callback from URL...');
+          
+          // Try to exchange the code for a session
+          const { data: authData, error: authError } = await supabase.auth.exchangeCodeForSession(urlParams.get('code') || '');
+          
+          if (authError) {
+            console.error('❌ Code exchange error:', authError);
+            throw authError;
+          }
+          
+          session = authData.session;
+          console.log('✅ Session from code exchange:', session ? 'Success' : 'Failed');
+        } else {
+          // No auth params, just check for existing session
+          console.log('🔍 No auth params, checking existing session...');
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+          
+          if (sessionError) {
+            console.error('❌ Session error:', sessionError);
+            throw sessionError;
+          }
+          
+          session = sessionData.session;
+        }
+
+        console.log('📱 Session status:', session ? 'Found' : 'Not found');
+
+        if (session) {
           // Get user type from multiple sources (URL params, localStorage, default)
           const userTypeFromUrl = searchParams.get('user_type');
           const userTypeFromStorage = localStorage.getItem('oauth_user_type');
@@ -32,6 +82,8 @@ const AuthCallback: React.FC = () => {
           
           // Clean up localStorage
           localStorage.removeItem('oauth_user_type');
+          
+          console.log('✅ Session found, user:', session.user.email);
           
           // Update the user's auth metadata with the user_type for the trigger
           const { error: updateError } = await supabase.auth.updateUser({
@@ -49,7 +101,7 @@ const AuthCallback: React.FC = () => {
           const { data: existingUser } = await supabase
             .from('users')
             .select('*')
-            .eq('auth_user_id', data.session.user.id)
+            .eq('auth_user_id', session.user.id)
             .maybeSingle();
 
           if (!existingUser) {
@@ -58,9 +110,9 @@ const AuthCallback: React.FC = () => {
             const { error: insertError } = await supabase
               .from('users')
               .insert({
-                auth_user_id: data.session.user.id,
-                email: data.session.user.email,
-                name: data.session.user.user_metadata?.name || data.session.user.email,
+                auth_user_id: session.user.id,
+                email: session.user.email,
+                name: session.user.user_metadata?.name || session.user.email,
                 active_role: userType,
                 auth_provider: 'google',
                 is_face_registered: false
@@ -75,7 +127,7 @@ const AuthCallback: React.FC = () => {
               await supabase
                 .from('user_roles')
                 .insert({
-                  auth_user_id: data.session.user.id,
+                  auth_user_id: session.user.id,
                   role_type: userType,
                   institution_context: 'default'
                 });
@@ -86,7 +138,7 @@ const AuthCallback: React.FC = () => {
             
             // Add the requested role if user doesn't have it
             const { error: roleError } = await supabase.rpc('add_user_role', {
-              p_auth_user_id: data.session.user.id,
+              p_auth_user_id: session.user.id,
               p_role_type: userType
             });
 
@@ -96,7 +148,7 @@ const AuthCallback: React.FC = () => {
 
             // Switch to the requested role
             const { error: switchError } = await supabase.rpc('switch_user_role', {
-              p_auth_user_id: data.session.user.id,
+              p_auth_user_id: session.user.id,
               p_role_type: userType
             });
 

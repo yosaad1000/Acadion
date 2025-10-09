@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ${DOCKER_USERNAME}/attendify-backend:${VERSION:-latest}
+    container_name: attendify-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DOCKER_ENV=true
+      - ENVIRONMENT=production
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - redis
+    networks:
+      - attendify-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: ${DOCKER_USERNAME}/attendify-frontend:${VERSION:-latest}
+    container_name: attendify-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - attendify-network
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: attendify-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-defaultpassword}
+    networks:
+      - attendify-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:
+
+networks:
+  attendify-network:
+    driver: bridge

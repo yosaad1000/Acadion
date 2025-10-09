@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import InviteCodeDisplay from '../components/InviteCodeDisplay';
+import SessionList from '../components/Session/SessionList';
+import CreateSession from '../components/Session/CreateSession';
 import { 
   ArrowLeftIcon, 
   UserGroupIcon, 
@@ -9,7 +11,8 @@ import {
   CameraIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 interface ClassData {
@@ -37,8 +40,9 @@ const ClassRoom: React.FC = () => {
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'stream' | 'people' | 'attendance'>('stream');
+  const [activeTab, setActiveTab] = useState<'stream' | 'sessions' | 'people' | 'attendance'>('stream');
   const [loading, setLoading] = useState(true);
+  const [showCreateSession, setShowCreateSession] = useState(false);
 
   useEffect(() => {
     if (classId) {
@@ -175,6 +179,16 @@ const ClassRoom: React.FC = () => {
                 Stream
               </button>
               <button
+                onClick={() => setActiveTab('sessions')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'sessions'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Sessions
+              </button>
+              <button
                 onClick={() => setActiveTab('people')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'people'
@@ -282,6 +296,15 @@ const ClassRoom: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'sessions' && (
+          <div>
+            <SessionList 
+              subjectId={classId!} 
+              onCreateSession={() => setShowCreateSession(true)}
+            />
           </div>
         )}
 
@@ -468,6 +491,17 @@ const ClassRoom: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Create Session Modal */}
+      <CreateSession
+        subjectId={classId!}
+        isOpen={showCreateSession}
+        onClose={() => setShowCreateSession(false)}
+        onSuccess={(sessionId) => {
+          // Navigate to the new session detail page
+          navigate(`/class/${classId}/session/${sessionId}`);
+        }}
+      />
     </div>
   );
 };

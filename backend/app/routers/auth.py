@@ -7,7 +7,7 @@ from passlib.context import CryptContext
 from app.config import settings
 from app.models.user import UserCreate, UserLogin, UserResponse, GoogleAuthRequest, AuthProvider
 from app.services.local_supabase import LocalSupabase
-from app.services.google_oauth import google_oauth_service
+from app.services.google_oauth import google_integration_service
 from app.middleware.supabase_auth import get_current_user_supabase
 import logging
 import uuid
@@ -175,7 +175,7 @@ async def logout():
 async def get_google_auth_url():
     """Get Google OAuth authorization URL"""
     try:
-        auth_url = google_oauth_service.get_authorization_url()
+        auth_url = google_integration_service.get_authorization_url()
         return {"auth_url": auth_url}
     except Exception as e:
         logger.error(f"Error generating Google auth URL: {e}")
@@ -186,12 +186,12 @@ async def google_callback(auth_request: GoogleAuthRequest):
     """Handle Google OAuth callback"""
     try:
         # Exchange code for token
-        token_data = await google_oauth_service.exchange_code_for_token(auth_request.code)
+        token_data = await google_integration_service.exchange_code_for_token(auth_request.code)
         if not token_data:
             raise HTTPException(status_code=400, detail="Failed to exchange code for token")
         
         # Get user info from Google
-        user_info = await google_oauth_service.get_user_info(token_data["access_token"])
+        user_info = await google_integration_service.get_user_info(token_data["access_token"])
         if not user_info:
             raise HTTPException(status_code=400, detail="Failed to get user info from Google")
         
