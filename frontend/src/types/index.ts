@@ -149,3 +149,65 @@ export interface JoinFailedData {
   error_message: string;
   failed_at: string;
 }
+
+// Session Management Types
+export interface Session {
+  session_id: string;
+  subject_id: string;
+  name: string;
+  description?: string;
+  session_date?: string;
+  notes?: string;
+  attendance_taken: boolean;
+  assignments: Assignment[];
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Assignment {
+  assignment_id: string;
+  session_id: string;
+  title: string;
+  description?: string;
+  due_date?: string;
+  assignment_type: 'homework' | 'test' | 'project';
+  google_drive_link?: string;
+  submission_status?: 'pending' | 'submitted' | 'graded';
+  created_at: string;
+}
+
+export interface SessionCreate {
+  name: string;
+  description?: string;
+  session_date?: string;
+  notes?: string;
+}
+
+export interface SessionUpdate {
+  name?: string;
+  description?: string;
+  session_date?: string;
+  notes?: string;
+}
+
+// Assignment Management Types
+export interface AssignmentCreate {
+  title: string;
+  description?: string;
+  due_date?: string;
+  assignment_type: 'homework' | 'test' | 'project';
+  google_drive_link?: string;
+}
+
+export interface AssignmentUpdate {
+  title?: string;
+  description?: string;
+  due_date?: string;
+  assignment_type?: 'homework' | 'test' | 'project';
+  google_drive_link?: string;
+}
+
+export interface AssignmentSubmissionUpdate {
+  submission_status: 'pending' | 'submitted' | 'graded';
+}

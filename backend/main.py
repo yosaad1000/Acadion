@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
-from app.routers import auth, subjects, attendance, supabase_auth, notifications
+from app.routers import auth, subjects, attendance, supabase_auth, notifications, sessions, assignments, google_integration
 # from app.routers import face_migration  # Temporarily disabled due to Supabase client initialization issue
 
 app = FastAPI(
@@ -32,8 +32,11 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(supabase_auth.router, prefix="/api/supabase-auth", tags=["Supabase Authentication"])
 app.include_router(subjects.router, prefix="/api/subjects", tags=["Subjects"])
+app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
+app.include_router(assignments.router, prefix="/api/assignments", tags=["Assignments"])
 app.include_router(attendance.router, prefix="/api/attendance", tags=["Attendance"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(google_integration.router, tags=["Google Integration"])
 # app.include_router(face_migration.router, tags=["Face Migration"])  # Temporarily disabled
 
 @app.get("/")

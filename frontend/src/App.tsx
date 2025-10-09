@@ -20,6 +20,7 @@ import ViewStudents from './pages/ViewStudents';
 import Profile from './pages/Profile';
 import FaceRegistration from './pages/FaceRegistration';
 import Notifications from './pages/Notifications';
+import SessionDetail from './pages/SessionDetail';
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -116,6 +117,7 @@ const AppRoutes: React.FC = () => {
         <Route path="create-class" element={<CreateClass />} />
         <Route path="join-class" element={<JoinClass />} />
         <Route path="class/:classId" element={<ClassRoom />} />
+        <Route path="class/:classId/session/:sessionId" element={<SessionDetail />} />
         <Route path="take-attendance/:classId" element={<TakeAttendance />} />
         <Route path="attendance-dashboard/:classId" element={<AttendanceDashboard />} />
         <Route path="student-attendance/:classId" element={<StudentAttendance />} />

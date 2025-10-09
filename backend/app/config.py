@@ -3,10 +3,16 @@ from pydantic_settings import BaseSettings
 from typing import List
 
 class Settings(BaseSettings):
-    # Supabase Configuration
+    # Supabase Configuration (Legacy - to be phased out)
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
     SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
     SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+    
+    # Appwrite Configuration
+    APPWRITE_ENDPOINT: str = os.getenv("APPWRITE_ENDPOINT", "http://localhost")
+    APPWRITE_PROJECT_ID: str = os.getenv("APPWRITE_PROJECT_ID", "")
+    APPWRITE_API_KEY: str = os.getenv("APPWRITE_API_KEY", "")
+    APPWRITE_DATABASE_ID: str = os.getenv("APPWRITE_DATABASE_ID", "main")
     
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "supersecretkey")
@@ -37,7 +43,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: str = ".jpg,.jpeg,.png,.pdf,.csv"
     
     # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:8081"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:8081"
     
     @property
     def allowed_origins_list(self) -> List[str]:

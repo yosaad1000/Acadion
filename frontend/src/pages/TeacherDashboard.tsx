@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useAIChat } from '../hooks/useAIChat';
 import ClassCard from '../components/ClassCard';
+import AIChatToggle from '../components/AIChat/AIChatToggle';
+import AIChatInterface from '../components/AIChat/AIChatInterface';
 import { api } from '../lib/api';
 import { 
   PlusIcon, 
@@ -28,6 +31,16 @@ const TeacherDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [subjects, setSubjects] = useState<TeachingSubject[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // AI Chat integration
+  const {
+    isOpen: isChatOpen,
+    messages: chatMessages,
+    isTyping: isChatTyping,
+    toggleChat,
+    closeChat,
+    sendMessage: sendChatMessage
+  } = useAIChat();
 
   useEffect(() => {
     fetchTeachingSubjects();
@@ -76,6 +89,19 @@ const TeacherDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 safe-area-padding transition-colors">
+      {/* AI Chat Components */}
+      <AIChatToggle 
+        isOpen={isChatOpen} 
+        onClick={toggleChat}
+      />
+      <AIChatInterface
+        isOpen={isChatOpen}
+        onClose={closeChat}
+        messages={chatMessages}
+        onSendMessage={sendChatMessage}
+        isTyping={isChatTyping}
+      />
+
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors">
         <div className="container-responsive">
