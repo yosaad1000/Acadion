@@ -21,6 +21,11 @@ async def get_current_user_supabase(credentials: HTTPAuthorizationCredentials = 
     )
     
     try:
+        logger.info("🚀 Authentication middleware called")
+        if not credentials:
+            logger.error("❌ No credentials provided")
+            raise credentials_exception
+        
         logger.info(f"🔑 Received token: {credentials.credentials[:50]}...")
         
         # Decode the Supabase JWT token
