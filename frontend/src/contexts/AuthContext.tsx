@@ -292,10 +292,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async (userType: 'teacher' | 'student') => {
     localStorage.setItem('oauth_user_type', userType);
+    
+    // Use production URL for OAuth redirect to ensure consistency
+    const redirectUrl = import.meta.env.PROD 
+      ? 'https://acadion-gamma.vercel.app/auth/callback'
+      : `${window.location.origin}/auth/callback`;
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?user_type=${userType}`,
+        redirectTo: `${redirectUrl}?user_type=${userType}`,
       }
     });
     if (error) throw error;
