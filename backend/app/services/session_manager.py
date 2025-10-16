@@ -1,4 +1,4 @@
-from app.config import settings as config
+from app.settings import settings as config
 import time
 from datetime import datetime, timedelta
 import uuid

@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from uuid import UUID
-from app.config import settings
+from app.settings import settings
 from app.models.google_integration import GoogleCalendarEvent
 from app.services.google_oauth import google_integration_service
 

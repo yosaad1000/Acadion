@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # Main backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=dev
+      - AWS_REGION=us-east-1
+      - SQS_ENABLED=true
+      - ASYNC_PROCESSING_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - FACE_RECOGNITION_SERVICE_URL=http://face-recognition-service:8001
+    depends_on:
+      - redis
+      - face-recognition-service
+    volumes:
+      - ./backend:/app
+    networks:
+      - acadion-network
+
+  # Face recognition workers
+  face-worker-1:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      - ENVIRONMENT=dev
+      - AWS_REGION=us-east-1
+      - SQS_ENABLED=true
+      - WORKER_ID=worker-1
+      - REDIS_URL=redis://redis:6379
+      - FACE_RECOGNITION_SERVICE_URL=http://face-recognition-service:8001
+    depends_on:
+      - redis
+      - face-recognition-service
+      - backend
+    volumes:
+      - ./backend:/app
+    networks:
+      - acadion-network
+    restart: unless-stopped
+
+  face-worker-2:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      - ENVIRONMENT=dev
+      - AWS_REGION=us-east-1
+      - SQS_ENABLED=true
+      - WORKER_ID=worker-2
+      - REDIS_URL=redis://redis:6379
+      - FACE_RECOGNITION_SERVICE_URL=http://face-recognition-service:8001
+    depends_on:
+      - redis
+      - face-recognition-service
+      - backend
+    volumes:
+      - ./backend:/app
+    networks:
+      - acadion-network
+    restart: unless-stopped
+
+  # Face recognition service
+  face-recognition-service:
+    build:
+      context: ./face-recognition-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - FACE_THRESHOLD=${FACE_THRESHOLD:-0.6}
+    volumes:
+      - ./face-recognition-service:/app
+    networks:
+      - acadion-network
+    restart: unless-stopped
+
+  # Redis for caching and job status
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - acadion-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Frontend (optional)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - acadion-network
+
+volumes:
+  redis_data:
+
+networks:
+  acadion-network:
+    driver: bridge

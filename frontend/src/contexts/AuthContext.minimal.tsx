@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchUserProfile = async (authUserId: string) => {
-    console.log('🔍 Fetching user profile for:', authUserId);
+    // Fetching user profile
     
     try {
       // Always set loading to true when starting

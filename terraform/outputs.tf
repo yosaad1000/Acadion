@@ -122,4 +122,24 @@ output "application_url" {
 output "api_url" {
   description = "URL to access the API"
   value       = "http://${module.ecs.alb_dns_name}:8000"
+}# M
+onitoring outputs
+output "sns_topic_arn" {
+  description = "ARN of the SNS topic for alerts"
+  value       = module.monitoring.sns_topic_arn
+}
+
+output "cloudwatch_dashboard_url" {
+  description = "URL of the CloudWatch dashboard"
+  value       = module.monitoring.dashboard_url
+}
+
+output "log_group_names" {
+  description = "Names of the CloudWatch log groups"
+  value       = module.monitoring.log_group_names
+}
+
+output "alarm_names" {
+  description = "Names of all CloudWatch alarms"
+  value       = module.monitoring.alarm_names
 }

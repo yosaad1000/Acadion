@@ -1,0 +1,62 @@
+# Face Recognition Microservice - CPU-Only Dockerfile
+# Optimized for environments without GPU support
+
+FROM python:3.9-slim-bullseye
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    pkg-config \
+    libopencv-dev \
+    libatlas-base-dev \
+    libboost-python-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libgtk-3-dev \
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create non-root user for security
+RUN groupadd -r facerecog && useradd -r -g facerecog facerecog
+RUN chown -R facerecog:facerecog /app
+USER facerecog
+
+# Environment variables for CPU optimization
+ENV OMP_NUM_THREADS=4
+ENV OPENBLAS_NUM_THREADS=4
+ENV MKL_NUM_THREADS=4
+ENV VECLIB_MAXIMUM_THREADS=4
+ENV NUMEXPR_NUM_THREADS=4
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python3 -c "import requests; requests.get('http://localhost:8001/health', timeout=5)"
+
+# Expose port
+EXPOSE 8001
+
+# Start command
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]

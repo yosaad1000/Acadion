@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime
 from pinecone import Pinecone, ServerlessSpec
 
-from app.config import settings as config
+from app.settings import settings as config
 from app.services.database_interface import DatabaseInterface
 from app.services.supabase_adapter import SupabaseAdapter
 

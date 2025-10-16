@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useAIChat } from '../hooks/useAIChat';
 import AIChatToggle from '../components/AIChat/AIChatToggle';
 import AIChatInterface from '../components/AIChat/AIChatInterface';
+import { StudentSessionList } from '../components/Student';
 import { 
   PlusIcon, 
   BookOpenIcon, 
@@ -11,7 +12,8 @@ import {
   UserGroupIcon,
   ClockIcon,
   CheckCircleIcon,
-  CameraIcon
+  CameraIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 interface EnrolledSubject {
@@ -29,6 +31,7 @@ const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [subjects, setSubjects] = useState<EnrolledSubject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'sessions' | 'classes'>('sessions');
   
   // AI Chat integration
   const {
@@ -102,10 +105,10 @@ const StudentDashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6 space-y-3 sm:space-y-0">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                My Classes
+                Student Dashboard
               </h1>
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1">
-                Welcome back, {user?.name}! Here are your enrolled classes.
+                Welcome back, {user?.name}! Track your sessions and manage your classes.
               </p>
             </div>
             
@@ -185,71 +188,103 @@ const StudentDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Enrolled Classes */}
-        {subjects.length === 0 ? (
-          <div className="text-center py-8 sm:py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
-            <BookOpenIcon className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500" />
-            <h3 className="mt-2 text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100">
-              No classes joined yet
-            </h3>
-            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 px-4 sm:px-0">
-              Join a class using the class code provided by your teacher.
-            </p>
-            <div className="mt-4 sm:mt-6">
-              <Link
-                to="/join-class"
-                className="btn-mobile bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800 shadow-sm inline-flex items-center justify-center"
-              >
-                <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                <span className="text-sm sm:text-base">Join Your First Class</span>
-              </Link>
-            </div>
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('sessions')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'sessions'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            My Sessions
+          </button>
+          <button
+            onClick={() => setActiveTab('classes')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              activeTab === 'classes'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+            }`}
+          >
+            My Classes
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'sessions' ? (
+          <div>
+            <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 sm:mb-6">Your Sessions</h2>
+            <StudentSessionList />
           </div>
         ) : (
-          <div>
-            <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 sm:mb-6">Your Classes</h2>
-            <div className="grid-responsive-4">
-              {subjects.map((subject, index) => (
+          /* Enrolled Classes */
+          subjects.length === 0 ? (
+            <div className="text-center py-8 sm:py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors">
+              <BookOpenIcon className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500" />
+              <h3 className="mt-2 text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100">
+                No classes joined yet
+              </h3>
+              <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 px-4 sm:px-0">
+                Join a class using the class code provided by your teacher.
+              </p>
+              <div className="mt-4 sm:mt-6">
                 <Link
-                  key={subject.subject_id}
-                  to={`/class/${subject.subject_id}`}
-                  className="group touch-manipulation"
+                  to="/join-class"
+                  className="btn-mobile bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800 shadow-sm inline-flex items-center justify-center"
                 >
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-200 group-hover:scale-[1.02] group-active:scale-[0.98]">
-                    {/* Class Header with Color */}
-                    <div className={`${getSubjectColor(index)} h-20 sm:h-24 relative`}>
-                      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                      <div className="relative p-3 sm:p-4 text-white">
-                        <h3 className="font-semibold text-base sm:text-lg truncate">{subject.name}</h3>
-                        <p className="text-xs sm:text-sm opacity-90">{subject.subject_code}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Class Info */}
-                    <div className="p-3 sm:p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate mr-2">{subject.teacher_name}</span>
-                        <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
-                          <UserGroupIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                          {subject.student_count}
+                  <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  <span className="text-sm sm:text-base">Join Your First Class</span>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2 className="text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 sm:mb-6">Your Classes</h2>
+              <div className="grid-responsive-4">
+                {subjects.map((subject, index) => (
+                  <Link
+                    key={subject.subject_id}
+                    to={`/class/${subject.subject_id}`}
+                    className="group touch-manipulation"
+                  >
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-200 group-hover:scale-[1.02] group-active:scale-[0.98]">
+                      {/* Class Header with Color */}
+                      <div className={`${getSubjectColor(index)} h-20 sm:h-24 relative`}>
+                        <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                        <div className="relative p-3 sm:p-4 text-white">
+                          <h3 className="font-semibold text-base sm:text-lg truncate">{subject.name}</h3>
+                          <p className="text-xs sm:text-sm opacity-90">{subject.subject_code}</p>
                         </div>
                       </div>
                       
-                      {subject.description && (
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-2 sm:mb-3">
-                          {subject.description}
-                        </p>
-                      )}
-                      
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Joined {new Date(subject.created_at).toLocaleDateString()}
+                      {/* Class Info */}
+                      <div className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate mr-2">{subject.teacher_name}</span>
+                          <div className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            <UserGroupIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                            {subject.student_count}
+                          </div>
+                        </div>
+                        
+                        {subject.description && (
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-2 sm:mb-3">
+                            {subject.description}
+                          </p>
+                        )}
+                        
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Joined {new Date(subject.created_at).toLocaleDateString()}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          )
         )}
       </div>
     </div>

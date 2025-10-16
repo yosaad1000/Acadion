@@ -2,7 +2,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import date
 import httpx
-from app.config import settings
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +107,44 @@ class LocalSupabase:
     async def get_student_by_id(self, student_id: str) -> Optional[Dict[str, Any]]:
         """Alias for get_student method"""
         return await self.get_student(student_id)
+    
+    async def get_student_id_by_user_id(self, user_id: str) -> Optional[str]:
+        """Get student_id from user_id by looking up the user's email in students table"""
+        try:
+            logger.info(f"🔍 Getting student_id for user_id: {user_id}")
+            # First get the user's email from users table
+            user_data = await self.get_user_by_id(user_id)
+            if not user_data:
+                logger.warning(f"❌ No user data found for user_id: {user_id}")
+                return None
+            
+            user_email = user_data.get("email")
+            if not user_email:
+                logger.warning(f"❌ No email found for user_id: {user_id}")
+                return None
+            
+            logger.info(f"📧 Looking up student with email: {user_email}")
+            
+            # Then find the student with matching email
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/students",
+                    headers=self.headers,
+                    params={"email": f"eq.{user_email}"}
+                )
+                if response.status_code == 200:
+                    students = response.json()
+                    logger.info(f"📝 Found {len(students)} students with email {user_email}")
+                    if students:
+                        student_id = students[0].get("student_id")
+                        logger.info(f"✅ Found student_id: {student_id}")
+                        return student_id
+                else:
+                    logger.error(f"❌ Failed to query students: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Error getting student_id for user_id {user_id}: {e}")
+            return None
     
     async def update_student_face_encoding(self, student_id: str, has_face_encoding: bool) -> bool:
         """Update student's face encoding status"""
@@ -476,12 +514,13 @@ class LocalSupabase:
                     params={
                         "subject_id": f"eq.{subject_id}",
                         "is_active": "eq.true",
-                        "select": "*,student:users!student_id(user_id,name,email,is_face_registered)"
+                        "select": "*"
                     }
                 )
                 if response.status_code == 200:
                     enrollments = response.json()
-                    return [enrollment["student"] for enrollment in enrollments]
+                    # Since we can't join with users table, return enrollment data with student_id
+                    return [{"user_id": enrollment["student_id"], "name": "", "email": "", "is_face_registered": False} for enrollment in enrollments]
                 return []
         except Exception as e:
             logger.error(f"Error getting subject students: {e}")
@@ -509,6 +548,47 @@ class LocalSupabase:
             logger.error(f"Error getting student count: {e}")
             return 0
     
+    async def update_subject(self, subject_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update a subject"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.patch(
+                    f"{self.base_url}/rest/v1/subjects",
+                    headers=self.headers,
+                    params={"subject_id": f"eq.{subject_id}"},
+                    json=update_data
+                )
+                
+                if response.status_code == 200:
+                    updated_subjects = response.json()
+                    if updated_subjects:
+                        # Get the updated subject with teacher name
+                        updated_subject = updated_subjects[0]
+                        
+                        # Fetch teacher name
+                        teacher_response = await client.get(
+                            f"{self.base_url}/rest/v1/users",
+                            headers=self.headers,
+                            params={"auth_user_id": f"eq.{updated_subject['teacher_id']}"}
+                        )
+                        
+                        if teacher_response.status_code == 200:
+                            teachers = teacher_response.json()
+                            if teachers:
+                                updated_subject["teacher_name"] = teachers[0]["name"]
+                        
+                        # Get student count
+                        updated_subject["student_count"] = await self.get_subject_student_count(subject_id)
+                        
+                        logger.info(f"Updated subject: {updated_subject['name']}")
+                        return updated_subject
+                else:
+                    logger.error(f"Failed to update subject: {response.status_code} - {response.text}")
+                    return None
+        except Exception as e:
+            logger.error(f"Error updating subject: {e}")
+            return None
+
     async def delete_subject(self, subject_id: str) -> bool:
         """Delete a subject"""
         try:
@@ -570,13 +650,13 @@ class LocalSupabase:
                     headers=self.headers,
                     params={
                         "subject_id": f"eq.{subject_id}",
-                        "select": "*,student:users!student_id(name),subject:subjects!subject_id(name)"
+                        "select": "*,subject:subjects!subject_id(name)"
                     }
                 )
                 if response.status_code == 200:
                     records = response.json()
                     for record in records:
-                        record["student_name"] = record.get("student", {}).get("name", "")
+                        record["student_name"] = ""  # Can't get from auth.users join
                         record["subject_name"] = record.get("subject", {}).get("name", "")
                     return records
                 return []
@@ -594,13 +674,13 @@ class LocalSupabase:
                     params={
                         "subject_id": f"eq.{subject_id}",
                         "date": f"eq.{attendance_date}",
-                        "select": "*,student:users!student_id(name),subject:subjects!subject_id(name)"
+                        "select": "*,subject:subjects!subject_id(name)"
                     }
                 )
                 if response.status_code == 200:
                     records = response.json()
                     for record in records:
-                        record["student_name"] = record.get("student", {}).get("name", "")
+                        record["student_name"] = ""  # Can't get from auth.users join
                         record["subject_name"] = record.get("subject", {}).get("name", "")
                     return records
                 return []
@@ -653,7 +733,7 @@ class LocalSupabase:
                 params = {
                     "subject_id": f"eq.{subject_id}",
                     "session_id": f"eq.{session_id}",
-                    "select": "*,student:users!student_id(name),subject:subjects!subject_id(name)"
+                    "select": "*,subject:subjects!subject_id(name)"
                 }
                 if attendance_date:
                     params["date"] = f"eq.{attendance_date}"
@@ -666,10 +746,97 @@ class LocalSupabase:
                 if response.status_code == 200:
                     records = response.json()
                     for record in records:
-                        record["student_name"] = record.get("student", {}).get("name", "")
+                        record["student_name"] = ""  # Can't get from auth.users join
                         record["subject_name"] = record.get("subject", {}).get("name", "")
                     return records
                 return []
         except Exception as e:
             logger.error(f"Error getting attendance by session: {e}")
+            return []
+    
+    # Additional methods needed for student sessions API
+    async def get_sessions_by_subject_id(self, subject_id: str) -> List[Dict[str, Any]]:
+        """Get all sessions for a subject"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/sessions",
+                    headers=self.headers,
+                    params={
+                        "subject_id": f"eq.{subject_id}",
+                        "select": "*"
+                    }
+                )
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    logger.error(f"Failed to get sessions: {response.status_code} - {response.text}")
+                    return []
+        except Exception as e:
+            logger.error(f"Error getting sessions by subject ID: {e}")
+            return []
+    
+    async def get_teacher_by_id(self, teacher_id: str) -> Optional[Dict[str, Any]]:
+        """Get teacher information by ID"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/users",
+                    headers=self.headers,
+                    params={"auth_user_id": f"eq.{teacher_id}"}
+                )
+                if response.status_code == 200:
+                    users = response.json()
+                    return users[0] if users else None
+                return None
+        except Exception as e:
+            logger.error(f"Error getting teacher by ID: {e}")
+            return None
+    
+    async def get_student_attendance_status(self, student_id: str, session_id: str) -> str:
+        """Get attendance status for a student in a specific session"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/attendance",
+                    headers=self.headers,
+                    params={
+                        "student_id": f"eq.{student_id}",
+                        "session_id": f"eq.{session_id}"
+                    }
+                )
+                if response.status_code == 200:
+                    records = response.json()
+                    if records:
+                        # Return the most recent attendance status
+                        latest_record = max(records, key=lambda x: x.get('created_at', ''))
+                        return latest_record.get('status', 'pending')
+                    else:
+                        return 'pending'  # No attendance record found
+                else:
+                    logger.error(f"Failed to get attendance status: {response.status_code} - {response.text}")
+                    return 'pending'
+        except Exception as e:
+            logger.error(f"Error getting student attendance status: {e}")
+            return 'pending'
+    
+    async def get_assignments_by_session_id(self, session_id: str) -> List[Dict[str, Any]]:
+        """Get all assignments for a session"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/assignments",
+                    headers=self.headers,
+                    params={
+                        "session_id": f"eq.{session_id}",
+                        "select": "*"
+                    }
+                )
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    logger.error(f"Failed to get assignments: {response.status_code} - {response.text}")
+                    return []
+        except Exception as e:
+            logger.error(f"Error getting assignments by session ID: {e}")
             return []

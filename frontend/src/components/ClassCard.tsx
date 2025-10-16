@@ -1,6 +1,13 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { UserGroupIcon, CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  UserGroupIcon, 
+  CalendarIcon, 
+  ClockIcon,
+  EllipsisVerticalIcon,
+  PencilIcon,
+  TrashIcon
+} from '@heroicons/react/24/outline';
 import InviteCodeDisplay from './InviteCodeDisplay';
 
 interface ClassCardProps {
@@ -15,9 +22,36 @@ interface ClassCardProps {
   };
   index: number;
   showInviteCode?: boolean;
+  showActions?: boolean;
+  onEdit?: (subject: any) => void;
+  onDelete?: (subject: any) => void;
 }
 
-const ClassCard: React.FC<ClassCardProps> = ({ subject, index, showInviteCode = true }) => {
+const ClassCard: React.FC<ClassCardProps> = ({ 
+  subject, 
+  index, 
+  showInviteCode = true,
+  showActions = false,
+  onEdit,
+  onDelete
+}) => {
+  const navigate = useNavigate();
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close action menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+        setShowActionMenu(false);
+      }
+    };
+
+    if (showActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showActionMenu]);
   const getSubjectColor = (index: number) => {
     const colors = [
       'from-blue-500 to-blue-600',
@@ -41,12 +75,43 @@ const ClassCard: React.FC<ClassCardProps> = ({ subject, index, showInviteCode = 
     });
   };
 
+  const handleActionClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowActionMenu(!showActionMenu);
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowActionMenu(false);
+    if (onEdit) {
+      onEdit(subject);
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowActionMenu(false);
+    if (onDelete) {
+      onDelete(subject);
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Only navigate if not clicking on action menu
+    if (!showActionMenu) {
+      navigate(`/class/${subject.subject_id}`);
+    }
+  };
+
   return (
-    <Link
-      to={`/class/${subject.subject_id}`}
-      className="group touch-manipulation block"
+    <div
+      onClick={handleCardClick}
+      className="group touch-manipulation block cursor-pointer"
     >
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg dark:hover:shadow-2xl transition-all duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg dark:hover:shadow-2xl transition-all duration-300 group-hover:scale-[1.02] group-hover:-translate-y-1 relative">
         {/* Class Header with Gradient */}
         <div className={`bg-gradient-to-r ${getSubjectColor(index)} h-24 sm:h-28 relative overflow-hidden`}>
           <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-all duration-300"></div>
@@ -74,6 +139,40 @@ const ClassCard: React.FC<ClassCardProps> = ({ subject, index, showInviteCode = 
                   <span className="hidden sm:inline">Active</span>
                 </div>
               </div>
+
+              {/* Action Menu */}
+              {showActions && (
+                <div className="relative" ref={actionMenuRef}>
+                  <button
+                    onClick={handleActionClick}
+                    className="p-1 text-white/80 hover:text-white rounded-md hover:bg-white/20 transition-colors"
+                    aria-label="Class actions"
+                  >
+                    <EllipsisVerticalIcon className="h-5 w-5" />
+                  </button>
+
+                  {showActionMenu && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                      <div className="py-1">
+                        <button
+                          onClick={handleEdit}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <PencilIcon className="h-4 w-4 mr-3" />
+                          Edit Class
+                        </button>
+                        <button
+                          onClick={handleDelete}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          <TrashIcon className="h-4 w-4 mr-3" />
+                          Delete Class
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -110,7 +209,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ subject, index, showInviteCode = 
         {/* Hover Effect Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       </div>
-    </Link>
+    </div>
   );
 };
 

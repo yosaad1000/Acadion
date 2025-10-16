@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.services.face_recognition import FaceRecognitionService
 from app.services.storage_service import StorageService
-from app.config import settings
+from app.settings import settings
 
 async def test_subject_filtering():
     """Test the subject filtering functionality"""

@@ -17,6 +17,11 @@ output "redis_auth_token" {
   sensitive   = true
 }
 
+output "redis_cluster_id" {
+  description = "Redis cluster ID"
+  value       = aws_elasticache_replication_group.redis.id
+}
+
 # S3 bucket outputs
 output "static_assets_bucket_name" {
   description = "Name of the static assets S3 bucket"
@@ -93,4 +98,65 @@ output "github_actions_role_arn" {
 output "deployment_artifacts_policy_arn" {
   description = "ARN of the deployment artifacts access policy"
   value       = aws_iam_policy.deployment_artifacts_access.arn
+}
+
+# Backup and Disaster Recovery outputs
+output "backup_vault_name" {
+  description = "Name of the AWS Backup vault"
+  value       = aws_backup_vault.main.name
+}
+
+output "backup_vault_arn" {
+  description = "ARN of the AWS Backup vault"
+  value       = aws_backup_vault.main.arn
+}
+
+output "backup_kms_key_id" {
+  description = "ID of the KMS key used for backup encryption"
+  value       = aws_kms_key.backup.key_id
+}
+
+output "backup_kms_key_arn" {
+  description = "ARN of the KMS key used for backup encryption"
+  value       = aws_kms_key.backup.arn
+}
+
+output "efs_backup_plan_id" {
+  description = "ID of the EFS backup plan"
+  value       = aws_backup_plan.efs.id
+}
+
+output "efs_backup_plan_arn" {
+  description = "ARN of the EFS backup plan"
+  value       = aws_backup_plan.efs.arn
+}
+
+output "redis_backups_bucket_name" {
+  description = "Name of the Redis backups S3 bucket"
+  value       = aws_s3_bucket.redis_backups.bucket
+}
+
+output "redis_backups_bucket_arn" {
+  description = "ARN of the Redis backups S3 bucket"
+  value       = aws_s3_bucket.redis_backups.arn
+}
+
+output "redis_backup_lambda_function_name" {
+  description = "Name of the Redis backup Lambda function"
+  value       = aws_lambda_function.redis_backup_export.function_name
+}
+
+output "redis_backup_lambda_function_arn" {
+  description = "ARN of the Redis backup Lambda function"
+  value       = aws_lambda_function.redis_backup_export.arn
+}
+
+output "app_data_replica_bucket_name" {
+  description = "Name of the app data replica bucket (if cross-region replication is enabled)"
+  value       = var.enable_cross_region_replication ? aws_s3_bucket.app_data_replica[0].bucket : null
+}
+
+output "app_data_replica_bucket_arn" {
+  description = "ARN of the app data replica bucket (if cross-region replication is enabled)"
+  value       = var.enable_cross_region_replication ? aws_s3_bucket.app_data_replica[0].arn : null
 }

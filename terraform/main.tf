@@ -25,6 +25,21 @@ provider "aws" {
   }
 }
 
+# Provider for disaster recovery region
+provider "aws" {
+  alias  = "dr"
+  region = var.disaster_recovery_region
+  
+  default_tags {
+    tags = {
+      Project     = "Acadion"
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+      Purpose     = "DisasterRecovery"
+    }
+  }
+}
+
 # Data sources
 data "aws_availability_zones" "available" {
   state = "available"
@@ -64,23 +79,43 @@ module "networking" {
 module "ecr" {
   source = "./modules/ecr"
 
-  name_prefix = local.name_prefix
+  name_prefix                = local.name_prefix
+  sns_topic_arn             = aws_sns_topic.backup_notifications.arn
+  enable_deployment_tracking = true
+  retention_policy = {
+    prod_images    = 10
+    staging_images = 5
+    untagged_days  = 1
+  }
   common_tags = local.common_tags
 }
 
 # Storage Module
 module "storage" {
   source = "./modules/storage"
+  
+  providers = {
+    aws.replica = aws.dr
+  }
 
   name_prefix                   = local.name_prefix
   private_subnet_ids           = module.networking.private_subnet_ids
   elasticache_security_group_id = module.networking.elasticache_security_group_id
   efs_security_group_id        = module.networking.efs_security_group_id
+  ecs_task_role_arn            = module.parameter_store.ecs_task_role_arn
+  ecs_execution_role_arn       = module.parameter_store.ecs_execution_role_arn
   aws_region                   = var.aws_region
   redis_node_type              = var.redis_node_type
   redis_num_cache_nodes        = var.redis_num_cache_nodes
   redis_auth_token             = random_password.redis_auth_token.result
   github_repository            = var.github_repository
+  s3_bucket_name               = "${local.name_prefix}-static-assets"
+  sns_topic_arn                = aws_sns_topic.backup_notifications.arn
+  environment                  = var.environment
+  enable_cross_region_replication = var.enable_cross_region_replication
+  backup_retention_days        = var.backup_retention_days
+  backup_cold_storage_days     = var.backup_cold_storage_days
+  weekly_backup_retention_days = var.weekly_backup_retention_days
   common_tags                  = local.common_tags
 }
 
@@ -171,4 +206,138 @@ module "ecs" {
   
   # Parameter Store Integration
   parameter_store_task_role_arn = module.parameter_store.ecs_task_role_arn
+}
+
+# Monitoring Module
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  environment            = var.environment
+  aws_region            = var.aws_region
+  ecs_cluster_name      = var.ecs_cluster_name
+  alb_arn_suffix        = module.ecs.alb_arn_suffix
+  elasticache_cluster_id = module.storage.redis_cluster_id
+  alert_email_addresses = var.alert_email_addresses
+  slack_webhook_url     = var.slack_webhook_url
+  log_retention_days    = var.log_retention_days
+  
+  # Configurable thresholds
+  cpu_threshold                      = var.cpu_threshold
+  memory_threshold                   = var.memory_threshold
+  response_time_threshold            = var.response_time_threshold
+  error_rate_threshold               = var.error_rate_threshold
+  face_recognition_queue_threshold   = var.face_recognition_queue_threshold
+  
+  # Additional monitoring configuration
+  critical_alert_email_addresses    = var.critical_alert_email_addresses
+  enable_lambda_alert_processor      = var.enable_lambda_alert_processor
+  efs_file_system_id                = module.storage.efs_file_system_id
+}
+
+# =============================================================================
+# BACKUP AND DISASTER RECOVERY CONFIGURATION
+# =============================================================================
+
+# SNS Topic for backup notifications
+resource "aws_sns_topic" "backup_notifications" {
+  name = "${local.name_prefix}-backup-notifications"
+
+  tags = local.common_tags
+}
+
+resource "aws_sns_topic_subscription" "backup_email" {
+  count     = length(var.backup_notification_emails)
+  topic_arn = aws_sns_topic.backup_notifications.arn
+  protocol  = "email"
+  endpoint  = var.backup_notification_emails[count.index]
+}
+
+# CloudWatch Dashboard for Backup Monitoring
+resource "aws_cloudwatch_dashboard" "backup_monitoring" {
+  dashboard_name = "${local.name_prefix}-backup-monitoring"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/Backup", "NumberOfBackupJobsCompleted", "BackupVaultName", module.storage.backup_vault_name],
+            [".", "NumberOfBackupJobsFailed", ".", "."],
+            ["AWS/ElastiCache", "BackupFailed", "ReplicationGroupId", module.storage.redis_cluster_id]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "Backup Job Status"
+          period  = 300
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/EFS", "StorageBytes", "FileSystemId", module.storage.efs_file_system_id, "StorageClass", "Total"],
+            ["AWS/S3", "BucketSizeBytes", "BucketName", module.storage.app_data_bucket_name, "StorageType", "StandardStorage"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = var.aws_region
+          title   = "Storage Utilization"
+          period  = 86400
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+# CloudWatch Alarms for Backup Monitoring
+resource "aws_cloudwatch_metric_alarm" "backup_job_failed" {
+  alarm_name          = "${local.name_prefix}-backup-job-failed"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "NumberOfBackupJobsFailed"
+  namespace           = "AWS/Backup"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "0"
+  alarm_description   = "This metric monitors failed backup jobs"
+  alarm_actions       = [aws_sns_topic.backup_notifications.arn]
+
+  dimensions = {
+    BackupVaultName = module.storage.backup_vault_name
+  }
+
+  tags = local.common_tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "efs_backup_failed" {
+  alarm_name          = "${local.name_prefix}-efs-backup-failed"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "NumberOfBackupJobsCompleted"
+  namespace           = "AWS/Backup"
+  period              = "86400"  # 24 hours
+  statistic           = "Sum"
+  threshold           = "1"
+  alarm_description   = "This metric monitors if EFS backup jobs are not completing daily"
+  alarm_actions       = [aws_sns_topic.backup_notifications.arn]
+
+  dimensions = {
+    BackupVaultName = module.storage.backup_vault_name
+  }
+
+  tags = local.common_tags
 }

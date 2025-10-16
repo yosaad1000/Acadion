@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { ViewProvider } from './contexts/ViewContext';
 import Layout from './components/Layout/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -136,9 +138,13 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <NotificationProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
+          <ToastProvider>
+            <ViewProvider>
+              <Router>
+                <AppRoutes />
+              </Router>
+            </ViewProvider>
+          </ToastProvider>
         </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>

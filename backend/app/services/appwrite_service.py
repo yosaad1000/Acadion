@@ -15,7 +15,7 @@ from appwrite.services.storage import Storage
 from appwrite.exception import AppwriteException
 from appwrite.query import Query
 
-from app.config import settings
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 

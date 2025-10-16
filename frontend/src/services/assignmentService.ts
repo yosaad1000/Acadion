@@ -32,7 +32,9 @@ export class AssignmentService {
     try {
       const response = await this.apiCall(`/api/sessions/${sessionId}/assignments`);
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        // Backend returns { assignments: [...], total_count, page, page_size }
+        return data.assignments || [];
       } else {
         console.error('Failed to fetch assignments:', response.status);
         return [];

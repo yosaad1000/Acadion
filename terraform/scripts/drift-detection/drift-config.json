@@ -1,0 +1,32 @@
+{
+  "aws_region": "us-east-1",
+  "terraform_dir": "/path/to/terraform",
+  "report_bucket": "acadion-prod-drift-reports",
+  "sns_topic_arn": "arn:aws:sns:us-east-1:123456789012:acadion-prod-drift-notifications",
+  
+  "required_tags": [
+    "Environment",
+    "Project", 
+    "ManagedBy",
+    "Owner",
+    "CostCenter"
+  ],
+  
+  "expected_public_security_groups": [
+    "acadion-prod-alb-sg",
+    "acadion-prod-cloudfront-sg"
+  ],
+  
+  "drift_detection_schedule": "0 6 * * *",
+  "notification_thresholds": {
+    "info": 0,
+    "warning": 1,
+    "critical": 5
+  },
+  
+  "remediation_actions": {
+    "auto_remediate_tags": true,
+    "auto_remediate_security_groups": false,
+    "require_approval_for_terraform_changes": true
+  }
+}

@@ -117,3 +117,46 @@ variable "parameter_store_task_role_arn" {
   description = "ARN of the IAM role for Parameter Store access"
   type        = string
 }
+
+# Auto Scaling Configuration Variables
+variable "backend_min_capacity" {
+  description = "Minimum number of backend service tasks"
+  type        = number
+  default     = 2
+}
+
+variable "backend_max_capacity" {
+  description = "Maximum number of backend service tasks"
+  type        = number
+  default     = 20
+}
+
+variable "frontend_min_capacity" {
+  description = "Minimum number of frontend service tasks"
+  type        = number
+  default     = 2
+}
+
+variable "frontend_max_capacity" {
+  description = "Maximum number of frontend service tasks"
+  type        = number
+  default     = 10
+}
+
+variable "face_recognition_min_capacity" {
+  description = "Minimum number of face recognition service tasks"
+  type        = number
+  default     = 1
+}
+
+variable "face_recognition_max_capacity" {
+  description = "Maximum number of face recognition service tasks"
+  type        = number
+  default     = 5
+}
+
+variable "enable_predictive_scaling" {
+  description = "Enable predictive scaling for known traffic patterns"
+  type        = bool
+  default     = true
+}

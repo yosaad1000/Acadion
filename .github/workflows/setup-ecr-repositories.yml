@@ -1,0 +1,228 @@
+name: Setup ECR Repositories
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/setup-ecr-repositories.yml'
+      - 'terraform/modules/ecr/**'
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  setup-ecr:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+
+    - name: Create ECR repositories with Terraform
+      run: |
+        cat > ecr-setup.tf << 'EOF'
+        terraform {
+          required_providers {
+            aws = {
+              source  = "hashicorp/aws"
+              version = "~> 5.0"
+            }
+          }
+        }
+
+        provider "aws" {
+          region = "us-east-1"
+        }
+
+        # Backend ECR Repository
+        resource "aws_ecr_repository" "backend" {
+          name                 = "acadion-backend"
+          image_tag_mutability = "MUTABLE"
+
+          image_scanning_configuration {
+            scan_on_push = true
+          }
+
+          lifecycle_policy {
+            policy = jsonencode({
+              rules = [
+                {
+                  rulePriority = 1
+                  description  = "Keep last 10 images"
+                  selection = {
+                    tagStatus     = "tagged"
+                    tagPrefixList = ["v"]
+                    countType     = "imageCountMoreThan"
+                    countNumber   = 10
+                  }
+                  action = {
+                    type = "expire"
+                  }
+                },
+                {
+                  rulePriority = 2
+                  description  = "Delete untagged images older than 1 day"
+                  selection = {
+                    tagStatus   = "untagged"
+                    countType   = "sinceImagePushed"
+                    countUnit   = "days"
+                    countNumber = 1
+                  }
+                  action = {
+                    type = "expire"
+                  }
+                }
+              ]
+            })
+          }
+
+          tags = {
+            Name        = "acadion-backend"
+            Environment = "production"
+            Service     = "backend"
+          }
+        }
+
+        # Frontend ECR Repository
+        resource "aws_ecr_repository" "frontend" {
+          name                 = "acadion-frontend"
+          image_tag_mutability = "MUTABLE"
+
+          image_scanning_configuration {
+            scan_on_push = true
+          }
+
+          lifecycle_policy {
+            policy = jsonencode({
+              rules = [
+                {
+                  rulePriority = 1
+                  description  = "Keep last 10 images"
+                  selection = {
+                    tagStatus     = "tagged"
+                    tagPrefixList = ["v"]
+                    countType     = "imageCountMoreThan"
+                    countNumber   = 10
+                  }
+                  action = {
+                    type = "expire"
+                  }
+                },
+                {
+                  rulePriority = 2
+                  description  = "Delete untagged images older than 1 day"
+                  selection = {
+                    tagStatus   = "untagged"
+                    countType   = "sinceImagePushed"
+                    countUnit   = "days"
+                    countNumber = 1
+                  }
+                  action = {
+                    type = "expire"
+                  }
+                }
+              ]
+            })
+          }
+
+          tags = {
+            Name        = "acadion-frontend"
+            Environment = "production"
+            Service     = "frontend"
+          }
+        }
+
+        # Face Recognition ECR Repository
+        resource "aws_ecr_repository" "face_recognition" {
+          name                 = "acadion-face-recognition"
+          image_tag_mutability = "MUTABLE"
+
+          image_scanning_configuration {
+            scan_on_push = true
+          }
+
+          lifecycle_policy {
+            policy = jsonencode({
+              rules = [
+                {
+                  rulePriority = 1
+                  description  = "Keep last 5 images (larger images)"
+                  selection = {
+                    tagStatus     = "tagged"
+                    tagPrefixList = ["v"]
+                    countType     = "imageCountMoreThan"
+                    countNumber   = 5
+                  }
+                  action = {
+                    type = "expire"
+                  }
+                },
+                {
+                  rulePriority = 2
+                  description  = "Delete untagged images older than 1 day"
+                  selection = {
+                    tagStatus   = "untagged"
+                    countType   = "sinceImagePushed"
+                    countUnit   = "days"
+                    countNumber = 1
+                  }
+                  action = {
+                    type = "expire"
+                  }
+                }
+              ]
+            })
+          }
+
+          tags = {
+            Name        = "acadion-face-recognition"
+            Environment = "production"
+            Service     = "face-recognition"
+          }
+        }
+
+        # Outputs
+        output "backend_repository_url" {
+          value = aws_ecr_repository.backend.repository_url
+        }
+
+        output "frontend_repository_url" {
+          value = aws_ecr_repository.frontend.repository_url
+        }
+
+        output "face_recognition_repository_url" {
+          value = aws_ecr_repository.face_recognition.repository_url
+        }
+        EOF
+
+    - name: Initialize Terraform
+      run: terraform init
+
+    - name: Plan Terraform changes
+      run: terraform plan
+
+    - name: Apply Terraform changes
+      run: terraform apply -auto-approve
+
+    - name: Output repository URLs
+      run: |
+        echo "ECR Repositories created successfully:"
+        terraform output -raw backend_repository_url
+        terraform output -raw frontend_repository_url  
+        terraform output -raw face_recognition_repository_url

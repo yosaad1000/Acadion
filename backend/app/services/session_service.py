@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from uuid import UUID
 import httpx
-from app.config import settings
+from app.settings import settings
 from app.models.session import SessionCreate, SessionUpdate, Session
 
 logger = logging.getLogger(__name__)
@@ -29,11 +29,63 @@ class SessionService:
             self._connection_healthy = False
             raise Exception(f"Failed to initialize SessionService: {e}")
     
+    async def generate_session_name(self, subject_id: UUID) -> str:
+        """Generate smart session names like 'Session 1', 'Session 2' based on existing sessions"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/rest/v1/sessions",
+                    headers={**self.headers, "Prefer": "count=exact"},
+                    params={
+                        "subject_id": f"eq.{subject_id}",
+                        "select": "session_id"
+                    }
+                )
+                
+                if response.status_code == 200:
+                    total_count = int(response.headers.get("Content-Range", "0").split("/")[-1])
+                    session_number = total_count + 1
+                    generated_name = f"Session {session_number}"
+                    logger.info(f"✅ Generated session name: {generated_name} for subject {subject_id}")
+                    return generated_name
+                else:
+                    logger.warning(f"Failed to count sessions, using default name: {response.status_code}")
+                    return "Session 1"
+                    
+        except Exception as e:
+            logger.error(f"❌ Error generating session name: {e}")
+            return "Session 1"
+    
+    async def create_session_with_defaults(self, session_data: SessionCreate, created_by: UUID) -> Optional[Dict[str, Any]]:
+        """Create session with smart defaults applied"""
+        try:
+            # Auto-generate session name if not provided or empty
+            if not session_data.name:
+                session_data.name = await self.generate_session_name(session_data.subject_id)
+            
+            # Set current datetime as default if not provided
+            if not session_data.session_date:
+                session_data.session_date = datetime.utcnow()
+            
+            return await self.create_session(session_data, created_by)
+            
+        except Exception as e:
+            logger.error(f"❌ Error creating session with defaults: {e}")
+            return None
+
     async def create_session(self, session_data: SessionCreate, created_by: UUID) -> Optional[Dict[str, Any]]:
         """Create a new session"""
         try:
             session_dict = session_data.model_dump()
             session_dict["created_by"] = str(created_by)
+            
+            # Convert UUID fields to strings
+            if session_dict.get("subject_id"):
+                session_dict["subject_id"] = str(session_dict["subject_id"])
+            
+            # Convert datetime to ISO string if present
+            if session_dict.get("session_date") and hasattr(session_dict["session_date"], "isoformat"):
+                session_dict["session_date"] = session_dict["session_date"].isoformat()
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -66,7 +118,7 @@ class SessionService:
                     headers=self.headers,
                     params={
                         "session_id": f"eq.{session_id}",
-                        "select": "*,subject:subjects(name,teacher_id),creator:users!created_by(name),assignments(*)"
+                        "select": "*,subject:subjects(name,teacher_id),assignments(*)"
                     }
                 )
                 
@@ -76,7 +128,7 @@ class SessionService:
                         session = sessions[0]
                         # Add computed fields
                         session["subject_name"] = session.get("subject", {}).get("name", "")
-                        session["teacher_name"] = session.get("creator", {}).get("name", "")
+                        session["teacher_name"] = ""  # Can't get from auth.users join
                         session["assignment_count"] = len(session.get("assignments", []))
                         logger.info(f"✅ Retrieved session {session_id}")
                         return session
@@ -101,7 +153,7 @@ class SessionService:
                     headers={**self.headers, "Prefer": "count=exact"},
                     params={
                         "subject_id": f"eq.{subject_id}",
-                        "select": "*,creator:users!created_by(name),assignments(*)",
+                        "select": "*,assignments(*)",
                         "order": "session_date.desc.nullslast,created_at.desc",
                         "limit": page_size,
                         "offset": offset
@@ -114,7 +166,7 @@ class SessionService:
                     
                     # Add computed fields
                     for session in sessions:
-                        session["teacher_name"] = session.get("creator", {}).get("name", "")
+                        session["teacher_name"] = ""  # Can't get from auth.users join
                         session["assignment_count"] = len(session.get("assignments", []))
                         
                         # Check for overdue assignments

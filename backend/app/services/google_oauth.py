@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from uuid import UUID
-from app.config import settings
+from app.settings import settings
 from app.models.google_integration import (
     GoogleIntegration, GoogleIntegrationCreate, GoogleIntegrationUpdate,
     GoogleAuthRequest, GoogleAuthResponse, GoogleIntegrationResponse

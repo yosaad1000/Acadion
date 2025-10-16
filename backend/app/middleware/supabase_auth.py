@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt
-from app.config import settings
+from app.settings import settings
 from app.services.local_supabase import LocalSupabase
 import logging
 

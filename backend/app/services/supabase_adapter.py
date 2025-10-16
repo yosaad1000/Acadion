@@ -2,7 +2,7 @@
 import logging
 from typing import List, Optional, Dict, Any
 from supabase import create_client, Client
-from app.config import settings
+from app.settings import settings
 from app.models.student import Student
 
 logger = logging.getLogger(__name__)

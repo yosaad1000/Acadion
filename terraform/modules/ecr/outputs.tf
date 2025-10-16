@@ -34,3 +34,34 @@ output "registry_id" {
   description = "Registry ID where the repositories are created"
   value       = aws_ecr_repository.backend.registry_id
 }
+
+# Deployment Management outputs
+output "deployment_metadata_bucket_name" {
+  description = "Name of the deployment metadata S3 bucket"
+  value       = aws_s3_bucket.deployment_metadata.bucket
+}
+
+output "deployment_metadata_bucket_arn" {
+  description = "ARN of the deployment metadata S3 bucket"
+  value       = aws_s3_bucket.deployment_metadata.arn
+}
+
+output "deployment_tracker_lambda_function_name" {
+  description = "Name of the deployment tracker Lambda function"
+  value       = aws_lambda_function.deployment_tracker.function_name
+}
+
+output "deployment_tracker_lambda_function_arn" {
+  description = "ARN of the deployment tracker Lambda function"
+  value       = aws_lambda_function.deployment_tracker.arn
+}
+
+output "deployment_rollback_lambda_function_name" {
+  description = "Name of the deployment rollback Lambda function"
+  value       = aws_lambda_function.deployment_rollback.function_name
+}
+
+output "deployment_rollback_lambda_function_arn" {
+  description = "ARN of the deployment rollback Lambda function"
+  value       = aws_lambda_function.deployment_rollback.arn
+}

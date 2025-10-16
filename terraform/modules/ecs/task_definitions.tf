@@ -58,6 +58,24 @@ resource "aws_iam_role_policy" "ecs_task_additional_policy" {
           "efs:ClientRootAccess"
         ]
         Resource = "arn:aws:elasticfilesystem:${var.aws_region}:*:file-system/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords",
+          "xray:GetSamplingRules",
+          "xray:GetSamplingTargets",
+          "xray:GetSamplingStatisticSummaries"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudwatch:PutMetricData"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -97,6 +115,18 @@ resource "aws_ecs_task_definition" "backend" {
         {
           name  = "FACE_RECOGNITION_SERVICE_URL"
           value = "http://${aws_lb.face_recognition.dns_name}:8001"
+        },
+        {
+          name  = "XRAY_ENABLED"
+          value = "true"
+        },
+        {
+          name  = "AWS_XRAY_TRACING_NAME"
+          value = "acadion-backend"
+        },
+        {
+          name  = "AWS_XRAY_DAEMON_ADDRESS"
+          value = "127.0.0.1:2000"
         }
       ]
 
@@ -141,6 +171,35 @@ resource "aws_ecs_task_definition" "backend" {
       }
 
       essential = true
+    },
+    {
+      name  = "xray-daemon"
+      image = "amazon/aws-xray-daemon:latest"
+      
+      portMappings = [
+        {
+          containerPort = 2000
+          protocol      = "udp"
+        }
+      ]
+
+      environment = [
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.backend.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "xray-daemon"
+        }
+      }
+
+      essential = false
     }
   ])
 
@@ -245,6 +304,18 @@ resource "aws_ecs_task_definition" "face_recognition" {
         {
           name  = "REDIS_URL"
           value = "redis://${var.redis_endpoint}:6379"
+        },
+        {
+          name  = "XRAY_ENABLED"
+          value = "true"
+        },
+        {
+          name  = "AWS_XRAY_TRACING_NAME"
+          value = "acadion-face-recognition"
+        },
+        {
+          name  = "AWS_XRAY_DAEMON_ADDRESS"
+          value = "127.0.0.1:2000"
         }
       ]
 
@@ -296,6 +367,35 @@ resource "aws_ecs_task_definition" "face_recognition" {
       ]
 
       essential = true
+    },
+    {
+      name  = "xray-daemon"
+      image = "amazon/aws-xray-daemon:latest"
+      
+      portMappings = [
+        {
+          containerPort = 2000
+          protocol      = "udp"
+        }
+      ]
+
+      environment = [
+        {
+          name  = "AWS_REGION"
+          value = var.aws_region
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.face_recognition.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "xray-daemon"
+        }
+      }
+
+      essential = false
     }
   ])
 

@@ -31,6 +31,11 @@ output "alb_arn" {
   value       = aws_lb.main.arn
 }
 
+output "alb_arn_suffix" {
+  description = "ARN suffix of the Application Load Balancer"
+  value       = aws_lb.main.arn_suffix
+}
+
 output "face_recognition_nlb_dns_name" {
   description = "DNS name of the Face Recognition Network Load Balancer"
   value       = aws_lb.face_recognition.dns_name
@@ -93,4 +98,25 @@ output "ecs_task_execution_role_arn" {
 output "ecs_task_role_arn" {
   description = "ARN of the ECS task role"
   value       = aws_iam_role.ecs_task_role.arn
+}
+
+# Auto Scaling outputs
+output "backend_autoscaling_target_resource_id" {
+  description = "Resource ID of the backend auto scaling target"
+  value       = aws_appautoscaling_target.backend_enhanced.resource_id
+}
+
+output "frontend_autoscaling_target_resource_id" {
+  description = "Resource ID of the frontend auto scaling target"
+  value       = aws_appautoscaling_target.frontend_enhanced.resource_id
+}
+
+output "face_recognition_autoscaling_target_resource_id" {
+  description = "Resource ID of the face recognition auto scaling target"
+  value       = aws_appautoscaling_target.face_recognition_enhanced.resource_id
+}
+
+output "autoscaling_dashboard_url" {
+  description = "URL of the CloudWatch dashboard for auto scaling metrics"
+  value       = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.autoscaling.dashboard_name}"
 }

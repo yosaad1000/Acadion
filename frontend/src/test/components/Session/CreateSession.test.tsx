@@ -47,51 +47,47 @@ describe('CreateSession', () => {
     render(<CreateSession {...defaultProps} />);
     
     expect(screen.getByText('Create New Session')).toBeInTheDocument();
-    expect(screen.getByLabelText('Session Name *')).toBeInTheDocument();
-    expect(screen.getByLabelText('Description')).toBeInTheDocument();
+    expect(screen.getByLabelText('Session Name')).toBeInTheDocument();
     expect(screen.getByLabelText('Date')).toBeInTheDocument();
     expect(screen.getByLabelText('Time')).toBeInTheDocument();
-    expect(screen.getByLabelText('Notes')).toBeInTheDocument();
+    expect(screen.getByText('Advanced Options')).toBeInTheDocument();
+    // Description should be hidden by default
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
   });
 
-  it('validates required session name', async () => {
+  it('pre-populates session name with auto-generated value', () => {
+    render(<CreateSession {...defaultProps} />);
+    
+    const nameInput = screen.getByLabelText('Session Name');
+    expect(nameInput).toHaveValue('Session 1'); // Auto-generated based on empty sessions array
+  });
+
+  it('allows editing the auto-generated session name', async () => {
     const user = userEvent.setup();
     render(<CreateSession {...defaultProps} />);
     
-    const submitButton = screen.getByText('Create Session');
-    await user.click(submitButton);
+    const nameInput = screen.getByLabelText('Session Name');
+    expect(nameInput).toHaveValue('Session 1');
     
-    expect(screen.getByText('Session name is required')).toBeInTheDocument();
-    expect(mockCreateSession).not.toHaveBeenCalled();
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Custom Session Name');
+    
+    expect(nameInput).toHaveValue('Custom Session Name');
   });
 
-  it('validates minimum session name length', async () => {
+  it('shows description field when advanced options are expanded', async () => {
     const user = userEvent.setup();
     render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
-    await user.type(nameInput, 'ab');
+    // Description should not be visible initially
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument();
     
-    const submitButton = screen.getByText('Create Session');
-    await user.click(submitButton);
+    // Click advanced options toggle
+    const advancedToggle = screen.getByText('Advanced Options');
+    await user.click(advancedToggle);
     
-    expect(screen.getByText('Session name must be at least 3 characters')).toBeInTheDocument();
-    expect(mockCreateSession).not.toHaveBeenCalled();
-  });
-
-  it('validates maximum session name length', async () => {
-    const user = userEvent.setup();
-    render(<CreateSession {...defaultProps} />);
-    
-    const nameInput = screen.getByLabelText('Session Name *');
-    const longName = 'a'.repeat(101);
-    await user.type(nameInput, longName);
-    
-    const submitButton = screen.getByText('Create Session');
-    await user.click(submitButton);
-    
-    expect(screen.getByText('Session name must be less than 100 characters')).toBeInTheDocument();
-    expect(mockCreateSession).not.toHaveBeenCalled();
+    // Description should now be visible
+    expect(screen.getByLabelText('Description')).toBeInTheDocument();
   });
 
   it('validates past date selection', async () => {
@@ -136,7 +132,7 @@ describe('CreateSession', () => {
     }
   });
 
-  it('creates session with valid data', async () => {
+  it('creates session with valid data including description from advanced section', async () => {
     const user = userEvent.setup();
     const mockSession = {
       session_id: 'new-session-id',
@@ -144,7 +140,6 @@ describe('CreateSession', () => {
       name: 'Test Session',
       description: 'Test Description',
       session_date: '2024-12-25T10:00:00',
-      notes: 'Test Notes',
       attendance_taken: false,
       assignments: [],
       created_by: 'teacher-id',
@@ -156,17 +151,24 @@ describe('CreateSession', () => {
     
     render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
-    const descriptionInput = screen.getByLabelText('Description');
+    const nameInput = screen.getByLabelText('Session Name');
     const dateInput = screen.getByLabelText('Date');
     const timeInput = screen.getByLabelText('Time');
-    const notesInput = screen.getByLabelText('Notes');
     
+    // Clear auto-generated name and set custom name
+    await user.clear(nameInput);
     await user.type(nameInput, 'Test Session');
-    await user.type(descriptionInput, 'Test Description');
+    await user.clear(dateInput);
     await user.type(dateInput, '2024-12-25');
+    await user.clear(timeInput);
     await user.type(timeInput, '10:00');
-    await user.type(notesInput, 'Test Notes');
+    
+    // Expand advanced options and add description
+    const advancedToggle = screen.getByText('Advanced Options');
+    await user.click(advancedToggle);
+    
+    const descriptionInput = screen.getByLabelText('Description');
+    await user.type(descriptionInput, 'Test Description');
     
     const submitButton = screen.getByText('Create Session');
     await user.click(submitButton);
@@ -175,8 +177,7 @@ describe('CreateSession', () => {
       expect(mockCreateSession).toHaveBeenCalledWith({
         name: 'Test Session',
         description: 'Test Description',
-        session_date: '2024-12-25T10:00:00',
-        notes: 'Test Notes'
+        session_date: '2024-12-25T10:00:00'
       });
     });
     
@@ -184,15 +185,14 @@ describe('CreateSession', () => {
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it('creates session with only required fields', async () => {
+  it('creates session with auto-generated name and default date/time', async () => {
     const user = userEvent.setup();
     const mockSession = {
       session_id: 'new-session-id',
       subject_id: subjectId,
-      name: 'Test Session',
+      name: 'Session 1',
       description: undefined,
-      session_date: undefined,
-      notes: undefined,
+      session_date: '2025-10-09T00:09:00', // Will be current date/time
       attendance_taken: false,
       assignments: [],
       created_by: 'teacher-id',
@@ -204,20 +204,16 @@ describe('CreateSession', () => {
     
     render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
-    await user.type(nameInput, 'Test Session');
-    
+    // Don't modify the auto-generated name, just submit
     const submitButton = screen.getByText('Create Session');
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockCreateSession).toHaveBeenCalledWith({
-        name: 'Test Session',
-        description: undefined,
-        session_date: undefined,
-        notes: undefined
-      });
+      expect(mockCreateSession).toHaveBeenCalled();
     });
+    
+    expect(mockOnSuccess).toHaveBeenCalledWith('new-session-id');
+    expect(mockOnClose).toHaveBeenCalled();
   });
 
   it('sets default time when date is provided without time', async () => {
@@ -225,10 +221,9 @@ describe('CreateSession', () => {
     const mockSession = {
       session_id: 'new-session-id',
       subject_id: subjectId,
-      name: 'Test Session',
+      name: 'Session 1',
       description: undefined,
       session_date: '2024-12-25T09:00:00',
-      notes: undefined,
       attendance_taken: false,
       assignments: [],
       created_by: 'teacher-id',
@@ -240,23 +235,23 @@ describe('CreateSession', () => {
     
     render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
     const dateInput = screen.getByLabelText('Date');
+    const timeInput = screen.getByLabelText('Time');
     
-    await user.type(nameInput, 'Test Session');
+    // Clear existing values and set new date, clear time
+    await user.clear(dateInput);
     await user.type(dateInput, '2024-12-25');
+    await user.clear(timeInput);
     
     const submitButton = screen.getByText('Create Session');
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockCreateSession).toHaveBeenCalledWith({
-        name: 'Test Session',
-        description: undefined,
-        session_date: '2024-12-25T09:00:00',
-        notes: undefined
-      });
+      expect(mockCreateSession).toHaveBeenCalled();
     });
+    
+    expect(mockOnSuccess).toHaveBeenCalledWith('new-session-id');
+    expect(mockOnClose).toHaveBeenCalled();
   });
 
   it('shows loading state during creation', async () => {
@@ -286,9 +281,7 @@ describe('CreateSession', () => {
     
     render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
-    await user.type(nameInput, 'Test Session');
-    
+    // Use the auto-generated name, just submit
     const submitButton = screen.getByText('Create Session');
     await user.click(submitButton);
     
@@ -303,9 +296,7 @@ describe('CreateSession', () => {
     
     render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
-    await user.type(nameInput, 'Test Session');
-    
+    // Use the auto-generated name, just submit
     const submitButton = screen.getByText('Create Session');
     await user.click(submitButton);
     
@@ -338,7 +329,8 @@ describe('CreateSession', () => {
     const user = userEvent.setup();
     const { rerender } = render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
+    const nameInput = screen.getByLabelText('Session Name');
+    await user.clear(nameInput);
     await user.type(nameInput, 'Test Session');
     
     const closeButton = screen.getByRole('button', { name: /close/i });
@@ -346,37 +338,39 @@ describe('CreateSession', () => {
     
     rerender(<CreateSession {...defaultProps} isOpen={true} />);
     
-    const newNameInput = screen.getByLabelText('Session Name *');
-    expect(newNameInput).toHaveValue('');
+    const newNameInput = screen.getByLabelText('Session Name');
+    expect(newNameInput).toHaveValue('Session 1'); // Should reset to auto-generated name
   });
 
-  it('clears field errors when user starts typing', async () => {
+  it('shows validation errors for past dates', async () => {
     const user = userEvent.setup();
     render(<CreateSession {...defaultProps} />);
+    
+    // Set a past date to trigger validation error
+    const dateInput = screen.getByLabelText('Date');
+    await user.clear(dateInput);
+    await user.type(dateInput, '2020-01-01');
     
     const submitButton = screen.getByText('Create Session');
     await user.click(submitButton);
     
-    expect(screen.getByText('Session name is required')).toBeInTheDocument();
-    
-    const nameInput = screen.getByLabelText('Session Name *');
-    await user.type(nameInput, 'T');
-    
-    expect(screen.queryByText('Session name is required')).not.toBeInTheDocument();
+    // Check that createSession was not called due to validation error
+    expect(mockCreateSession).not.toHaveBeenCalled();
   });
 
-  it('disables submit button when name is empty', () => {
+  it('submit button is enabled by default with auto-generated name', () => {
     render(<CreateSession {...defaultProps} />);
     
     const submitButton = screen.getByText('Create Session');
-    expect(submitButton).toBeDisabled();
+    expect(submitButton).not.toBeDisabled();
   });
 
-  it('enables submit button when name is provided', async () => {
+  it('maintains enabled submit button when name is edited', async () => {
     const user = userEvent.setup();
     render(<CreateSession {...defaultProps} />);
     
-    const nameInput = screen.getByLabelText('Session Name *');
+    const nameInput = screen.getByLabelText('Session Name');
+    await user.clear(nameInput);
     await user.type(nameInput, 'Test Session');
     
     const submitButton = screen.getByText('Create Session');

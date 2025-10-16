@@ -1,0 +1,76 @@
+# Docker Compose for Face Recognition Microservice Development
+
+version: '3.8'
+
+services:
+  face-recognition-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: face-recognition-gpu
+    ports:
+      - "8001:8001"
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-acadion-faces}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1}
+      - FACE_THRESHOLD=${FACE_THRESHOLD:-0.6}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./logs:/app/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  face-recognition-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    container_name: face-recognition-cpu
+    ports:
+      - "8002:8001"
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-acadion-faces}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1}
+      - FACE_THRESHOLD=${FACE_THRESHOLD:-0.6}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: face-recognition-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: face-recognition-network

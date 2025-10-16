@@ -4,7 +4,7 @@ Simplified NotificationService that works without proxy issues
 import logging
 from typing import List, Optional
 from datetime import datetime
-from app.config import settings
+from app.settings import settings
 from app.models.notification import (
     NotificationCreate, NotificationResponse, NotificationPreferenceResponse,
     NotificationType

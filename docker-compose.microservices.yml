@@ -1,0 +1,156 @@
+# Docker Compose for Microservices Architecture
+# Includes main backend and face recognition microservice
+
+version: '3.8'
+
+services:
+  # Main Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: acadion-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - FACE_THRESHOLD=${FACE_THRESHOLD}
+      - FACE_RECOGNITION_SERVICE_URL=http://face-recognition-service:8001
+      - FACE_RECOGNITION_TIMEOUT=30.0
+      - FACE_RECOGNITION_FALLBACK_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend/logs:/app/logs
+    depends_on:
+      - redis
+      - face-recognition-service
+    restart: unless-stopped
+    networks:
+      - acadion-network
+
+  # Face Recognition Microservice (GPU version)
+  face-recognition-service:
+    build:
+      context: ./face-recognition-service
+      dockerfile: Dockerfile
+    container_name: acadion-face-recognition
+    ports:
+      - "8001:8001"
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - FACE_THRESHOLD=${FACE_THRESHOLD}
+      - LOG_LEVEL=INFO
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./face-recognition-service/logs:/app/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - acadion-network
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Face Recognition Microservice (CPU fallback)
+  face-recognition-service-cpu:
+    build:
+      context: ./face-recognition-service
+      dockerfile: Dockerfile.cpu
+    container_name: acadion-face-recognition-cpu
+    ports:
+      - "8002:8001"
+    environment:
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+      - FACE_THRESHOLD=${FACE_THRESHOLD}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./face-recognition-service/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - acadion-network
+    profiles:
+      - cpu-fallback
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: acadion-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - acadion-network
+    command: redis-server --appendonly yes
+
+  # Frontend Service (optional)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: acadion-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_SUPABASE_URL=${SUPABASE_URL}
+      - REACT_APP_SUPABASE_ANON_KEY=${SUPABASE_KEY}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - acadion-network
+    profiles:
+      - frontend
+
+  # Nginx Load Balancer (for production)
+  nginx:
+    image: nginx:alpine
+    container_name: acadion-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - face-recognition-service
+    restart: unless-stopped
+    networks:
+      - acadion-network
+    profiles:
+      - production
+
+volumes:
+  redis_data:
+
+networks:
+  acadion-network:
+    driver: bridge

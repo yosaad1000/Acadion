@@ -288,4 +288,113 @@ variable "github_actions_role_arn" {
   description = "ARN of the GitHub Actions OIDC provider"
   type        = string
   default     = ""
+}# Mon
+itoring Configuration
+variable "alert_email_addresses" {
+  description = "List of email addresses to receive CloudWatch alerts"
+  type        = list(string)
+  default     = []
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL for notifications (optional)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention period in days"
+  type        = number
+  default     = 30
+}
+
+# Monitoring Thresholds
+variable "cpu_threshold" {
+  description = "CPU utilization threshold for alarms (%)"
+  type        = number
+  default     = 80
+}
+
+variable "memory_threshold" {
+  description = "Memory utilization threshold for alarms (%)"
+  type        = number
+  default     = 85
+}
+
+variable "response_time_threshold" {
+  description = "Response time threshold in seconds"
+  type        = number
+  default     = 2
+}
+
+variable "error_rate_threshold" {
+  description = "5XX error count threshold"
+  type        = number
+  default     = 10
+}
+
+variable "face_recognition_queue_threshold" {
+  description = "Face recognition queue length threshold"
+  type        = number
+  default     = 50
+}vari
+able "critical_alert_email_addresses" {
+  description = "List of email addresses to receive critical alerts (escalation)"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_lambda_alert_processor" {
+  description = "Enable Lambda function for advanced alert processing"
+  type        = bool
+  default     = false
+}
+
+# Backup and Disaster Recovery Configuration
+variable "disaster_recovery_region" {
+  description = "AWS region for disaster recovery"
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "enable_cross_region_replication" {
+  description = "Enable S3 cross-region replication for disaster recovery"
+  type        = bool
+  default     = false
+}
+
+variable "backup_notification_emails" {
+  description = "List of email addresses to receive backup notifications"
+  type        = list(string)
+  default     = []
+}
+
+variable "terraform_state_bucket" {
+  description = "S3 bucket name containing Terraform state files"
+  type        = string
+}
+
+variable "enable_config_drift_detection" {
+  description = "Enable AWS Config for configuration drift detection"
+  type        = bool
+  default     = false
+}
+
+variable "backup_retention_days" {
+  description = "Number of days to retain backups"
+  type        = number
+  default     = 365
+}
+
+variable "backup_cold_storage_days" {
+  description = "Number of days before moving backups to cold storage"
+  type        = number
+  default     = 30
+}
+
+variable "weekly_backup_retention_days" {
+  description = "Number of days to retain weekly backups"
+  type        = number
+  default     = 2555  # 7 years
 }

@@ -5,7 +5,7 @@ from io import BytesIO
 from PIL import Image, ImageDraw
 import face_recognition
 
-from app.config import settings as config
+from app.settings import settings as config
 
 logger = logging.getLogger(__name__)
 

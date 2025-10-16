@@ -73,31 +73,50 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
 // Predefined skeleton components for common use cases
 export const SessionCardSkeleton: React.FC = () => (
   <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-6 space-y-4">
-    <div className="flex justify-between items-start">
-      <div className="flex-1 space-y-2">
-        <LoadingSkeleton variant="text" width="60%" height={20} />
-        <LoadingSkeleton variant="text" width="40%" height={16} />
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+      <div className="flex-1 min-w-0 space-y-3">
+        {/* Title and status */}
+        <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          <LoadingSkeleton variant="text" width="60%" height={20} />
+          <LoadingSkeleton variant="rectangular" width={80} height={24} />
+        </div>
+        
+        {/* Description */}
+        <LoadingSkeleton variant="text" lines={2} />
+        
+        {/* Metadata */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <LoadingSkeleton variant="text" width={100} height={16} />
+          <LoadingSkeleton variant="text" width={120} height={16} />
+          <LoadingSkeleton variant="text" width={90} height={16} />
+        </div>
       </div>
-      <LoadingSkeleton variant="rectangular" width={60} height={24} />
-    </div>
-    <LoadingSkeleton variant="text" lines={2} />
-    <div className="flex space-x-4">
-      <LoadingSkeleton variant="text" width={80} height={16} />
-      <LoadingSkeleton variant="text" width={100} height={16} />
+      
+      {/* Created/Updated info */}
+      <div className="text-right space-y-1 flex-shrink-0 sm:ml-4">
+        <LoadingSkeleton variant="text" width={80} height={12} />
+        <LoadingSkeleton variant="text" width={90} height={12} />
+      </div>
     </div>
   </div>
 );
 
 export const SessionListSkeleton: React.FC = () => (
-  <div className="space-y-4">
-    <div className="flex justify-between items-center">
+  <div className="space-y-4 sm:space-y-6">
+    {/* Header skeleton */}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
       <div className="space-y-2">
         <LoadingSkeleton variant="text" width={120} height={24} />
         <LoadingSkeleton variant="text" width={180} height={16} />
       </div>
-      <LoadingSkeleton variant="rectangular" width={140} height={40} />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+        <LoadingSkeleton variant="rectangular" width={120} height={40} />
+        <LoadingSkeleton variant="rectangular" width={140} height={40} />
+      </div>
     </div>
-    <div className="space-y-4">
+    
+    {/* Session cards skeleton */}
+    <div className="space-y-3 sm:space-y-4">
       {Array.from({ length: 3 }).map((_, index) => (
         <SessionCardSkeleton key={index} />
       ))}
