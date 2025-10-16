@@ -7,7 +7,7 @@ from typing import Optional
 from aws_xray_sdk.core import xray_recorder, patch_all
 from aws_xray_sdk.core.context import Context
 from aws_xray_sdk.core.models import http
-from aws_xray_sdk.ext.fastapi import XRayMiddleware
+# Note: aws_xray_sdk.ext.fastapi doesn't exist, we'll use custom middleware
 from fastapi import FastAPI, Request
 from app.config.logging import get_logger
 
@@ -50,7 +50,8 @@ def add_xray_middleware(app: FastAPI) -> None:
         return
     
     try:
-        app.add_middleware(XRayMiddleware)
+        # Use our custom X-Ray middleware instead of the non-existent FastAPI extension
+        app.add_middleware(XRayRequestMiddleware)
         logger.info("X-Ray middleware added to FastAPI application")
     except Exception as e:
         logger.error(f"Failed to add X-Ray middleware: {e}")
