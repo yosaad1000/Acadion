@@ -152,12 +152,23 @@ jobs:
         echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
         chmod 600 key.pem
         
-        if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -f http://localhost:8000/api/health'; then
-          echo "✅ Backend is healthy"
-        else
-          echo "❌ Backend health check failed"
-          exit 1
-        fi
+        # Wait a bit more for backend to be fully ready
+        echo "⏳ Waiting additional 10 seconds for backend to be fully ready..."
+        sleep 10
+        
+        # Try health check with retries
+        for i in {1..3}; do
+          echo "🔍 Health check attempt $i/3..."
+          if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -f http://localhost:8000/api/health'; then
+            echo "✅ Backend is healthy"
+            exit 0
+          fi
+          echo "⏳ Waiting 5 seconds before retry..."
+          sleep 5
+        done
+        
+        echo "❌ Backend health check failed after 3 attempts"
+        exit 1
     
     - name: Deployment Summary
       run: |
