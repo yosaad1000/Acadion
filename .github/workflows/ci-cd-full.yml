@@ -148,8 +148,12 @@ jobs:
     # Deploy Backend
     - name: Create deployment archive
       run: |
-        # Create a tar archive of the project (excluding .git and other unnecessary files)
-        tar --exclude='.git' --exclude='node_modules' --exclude='*.log' --exclude='.env*' -czf acadion-deploy.tar.gz . || true
+        # Create a tar archive with only backend-related files
+        tar -czf acadion-deploy.tar.gz \
+          backend/ \
+          docker-compose.backend-only.yml \
+          Dockerfile.backend \
+          || true
     
     - name: Deploy Backend to EC2
       run: |
@@ -188,6 +192,10 @@ jobs:
         # Application Configuration
         FACE_THRESHOLD=0.6
         REDIS_URL=redis://redis:6379
+        
+        # AWS Configuration
+        AWS_DEFAULT_REGION=us-east-1
+        AWS_REGION=us-east-1
         ENVEOF
         
         # Stop existing backend container
