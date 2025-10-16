@@ -146,6 +146,11 @@ jobs:
     - uses: actions/checkout@v4
     
     # Deploy Backend
+    - name: Create deployment archive
+      run: |
+        # Create a tar archive of the project (excluding .git and other unnecessary files)
+        tar --exclude='.git' --exclude='node_modules' --exclude='*.log' --exclude='.env*' --warning=no-file-changed -czf acadion-deploy.tar.gz .
+    
     - name: Deploy Backend to EC2
       run: |
         echo "🚀 Deploying backend to EC2..."
@@ -157,12 +162,13 @@ jobs:
         
         echo "🚀 Starting backend deployment..."
         
-        # Navigate to project directory
-        cd /home/ec2-user/acadion || { echo "Project directory not found"; exit 1; }
+        # Create and navigate to project directory
+        mkdir -p /home/ec2-user/acadion
+        cd /home/ec2-user/acadion
         
-        # Pull latest changes
-        git fetch origin
-        git reset --hard origin/main
+        # Extract the uploaded code (will be uploaded by the workflow)
+        echo "📥 Extracting latest code..."
+        tar -xzf /tmp/acadion-deploy.tar.gz
         
         # Create/update environment file
         cat > backend/.env << 'ENVEOF'
@@ -209,7 +215,8 @@ jobs:
         echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
         chmod 600 key.pem
         
-        # Copy and execute deployment script
+        # Copy deployment files and execute deployment script
+        scp -i key.pem -o StrictHostKeyChecking=no acadion-deploy.tar.gz ec2-user@${{ env.EC2_HOST }}:/tmp/
         scp -i key.pem -o StrictHostKeyChecking=no deploy-backend.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
         ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/deploy-backend.sh && /tmp/deploy-backend.sh'
     
