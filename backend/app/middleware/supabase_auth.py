@@ -24,12 +24,15 @@ async def get_current_user_supabase(request: Request, credentials: HTTPAuthoriza
     try:
         logger.info("🚀 Authentication middleware called")
         logger.info(f"📋 Request headers: {dict(request.headers)}")
+        logger.info(f"🌐 Request URL: {request.url}")
+        logger.info(f"🔧 Request method: {request.method}")
         
         if not credentials:
             logger.error("❌ No credentials provided by HTTPBearer")
             # Check if Authorization header exists manually
             auth_header = request.headers.get("authorization")
             logger.info(f"🔍 Manual auth header check: {auth_header[:50] if auth_header else 'None'}...")
+            logger.error("❌ AUTHENTICATION FAILED: No Bearer token in request")
             raise credentials_exception
         
         logger.info(f"🔑 Received token: {credentials.credentials[:50]}...")
