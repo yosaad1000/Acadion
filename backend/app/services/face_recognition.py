@@ -6,7 +6,7 @@ import os
 from PIL import Image
 import io
 import base64
-from ..config import settings
+from ..settings import settings
 
 class FaceRecognitionService:
     def __init__(self):

@@ -5,7 +5,7 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 import face_recognition
 from typing import List, Tuple, Optional
-from config import settings
+from app.settings import settings
 
 logger = logging.getLogger(__name__)
 
