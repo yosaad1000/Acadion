@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.settings import settings
-from app.routers import auth, subjects, attendance, supabase_auth, notifications, sessions, assignments, google_integration, students, face_recognition
+from app.routers import auth, subjects, attendance, supabase_auth, notifications, sessions, assignments, google_integration, students, face_recognition, test_router
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.config.logging import setup_logging, get_logger
 from app.config.xray import configure_xray, add_xray_middleware, XRayRequestMiddleware
@@ -98,6 +98,7 @@ app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
 app.include_router(assignments.router, prefix="/api/assignments", tags=["Assignments"])
 app.include_router(attendance.router, prefix="/api/attendance", tags=["Attendance"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(test_router.router, prefix="/api/test", tags=["Test"])
 app.include_router(students.router, prefix="/api/students", tags=["Students"])
 app.include_router(face_recognition.router, prefix="/api/face-recognition", tags=["Face Recognition"])
 app.include_router(google_integration.router, tags=["Google Integration"])
