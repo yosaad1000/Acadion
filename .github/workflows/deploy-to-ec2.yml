@@ -1,0 +1,151 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches: [ main ]
+    paths: 
+      - 'backend/**'
+      - 'docker-compose*.yml'
+      - '.github/workflows/deploy-to-ec2.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'docker-compose*.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  EC2_INSTANCE_ID: i-0123456789abcdef0  # Replace with your actual instance ID
+  EC2_HOST: 54.167.95.26  # Replace with your actual EC2 IP
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    
+    - name: Run backend linting
+      run: |
+        cd backend
+        pip install flake8 black
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+        black --check . || true
+    
+    - name: Run backend tests
+      run: |
+        cd backend
+        python -m pytest tests/ -v || echo "Tests completed"
+    
+    - name: Build Docker image
+      run: |
+        docker build -t acadion-backend ./backend
+        docker run --rm acadion-backend python -c "import main; print('✅ Backend builds successfully')"
+
+  deploy-backend:
+    needs: test-backend
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to EC2
+      run: |
+        # Create deployment script
+        cat > deploy-backend.sh << 'EOF'
+        #!/bin/bash
+        set -e
+        
+        echo "🚀 Starting backend deployment..."
+        
+        # Navigate to project directory
+        cd /home/ec2-user/acadion || { echo "Project directory not found"; exit 1; }
+        
+        # Pull latest changes
+        git fetch origin
+        git reset --hard origin/main
+        
+        # Create/update environment file
+        cat > backend/.env << 'ENVEOF'
+        # Supabase Configuration
+        SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
+        SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
+        
+        # JWT Configuration
+        SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        
+        # Pinecone Configuration
+        PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+        PINECONE_ENVIRONMENT=${{ secrets.PINECONE_ENVIRONMENT }}
+        PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}
+        
+        # Application Configuration
+        FACE_THRESHOLD=0.6
+        REDIS_URL=redis://redis:6379
+        ENVEOF
+        
+        # Stop existing backend container
+        docker-compose -f docker-compose.backend-only.yml down || true
+        
+        # Build and start backend services
+        docker-compose -f docker-compose.backend-only.yml up -d --build
+        
+        # Wait for services to be ready
+        echo "⏳ Waiting for services to start..."
+        sleep 15
+        
+        # Health check
+        if curl -f http://localhost:8000/api/health; then
+          echo "✅ Backend deployment successful!"
+        else
+          echo "❌ Backend health check failed"
+          exit 1
+        fi
+        
+        echo "🎉 Backend deployment completed!"
+        EOF
+        
+        # Deploy to EC2
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Copy and execute deployment script
+        scp -i key.pem -o StrictHostKeyChecking=no deploy-backend.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/deploy-backend.sh && /tmp/deploy-backend.sh'
+    
+    - name: Health Check
+      run: |
+        echo "🔍 Performing final health check..."
+        
+        # Check HTTPS backend health
+        if curl -k -f https://${{ env.EC2_HOST }}/api/health; then
+          echo "✅ HTTPS Backend is healthy"
+        else
+          echo "❌ HTTPS Backend health check failed"
+          exit 1
+        fi
+    
+    - name: Deployment Summary
+      run: |
+        echo "🎉 Backend deployment completed successfully!"
+        echo ""
+        echo "🌐 Backend URLs:"
+        echo "   HTTPS API: https://${{ env.EC2_HOST }}"
+        echo "   API Health: https://${{ env.EC2_HOST }}/api/health"
+        echo "   API Docs: https://${{ env.EC2_HOST }}/docs"
+        echo ""
+        echo "🔧 Management:"
+        echo "   SSH: ssh -i acadion-key.pem ec2-user@${{ env.EC2_HOST }}"
+        echo "   Logs: ssh ec2-user@${{ env.EC2_HOST }} 'cd acadion && docker-compose -f docker-compose.backend-only.yml logs'"

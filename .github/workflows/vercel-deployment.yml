@@ -1,0 +1,184 @@
+name: Vercel Frontend Deployment
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/vercel-deployment.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/vercel-deployment.yml'
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  # Frontend testing and building
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      
+      - name: Type check
+        run: cd frontend && npm run type-check
+      
+      - name: Run tests
+        run: cd frontend && npm run test
+      
+      - name: Build application
+        run: cd frontend && npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          VITE_ENABLE_ANALYTICS: ${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
+          VITE_ENABLE_DEBUG: 'false'
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+          retention-days: 1
+
+  # Deploy to Vercel
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test-and-build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: frontend
+      
+      - name: Build Project Artifacts
+        run: vercel build ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: frontend
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          VITE_ENABLE_ANALYTICS: ${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
+          VITE_ENABLE_DEBUG: 'false'
+      
+      - name: Deploy Project Artifacts to Vercel
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }})
+          echo "deployment_url=$url" >> $GITHUB_OUTPUT
+        working-directory: frontend
+      
+      - name: Comment PR with deployment URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentUrl = '${{ steps.deploy.outputs.deployment_url }}';
+            const comment = `🚀 **Frontend Preview Deployment**
+            
+            ✅ Successfully deployed to Vercel!
+            
+            **Preview URL:** ${deploymentUrl}
+            
+            **Environment:** Staging
+            **Commit:** ${context.sha.substring(0, 7)}
+            **Branch:** ${context.ref.replace('refs/heads/', '')}
+            
+            This preview will be automatically updated with new commits to this PR.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: Update deployment status
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "✅ Production deployment successful!"
+          echo "🌐 Deployment URL: ${{ steps.deploy.outputs.deployment_url }}"
+
+  # Bundle size analysis (optional)
+  bundle-analysis:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      
+      - name: Build with bundle analysis
+        run: cd frontend && npm run build:analyze
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_ENVIRONMENT: staging
+          VITE_BUNDLE_ANALYZER: 'true'
+      
+      - name: Analyze bundle size
+        run: |
+          cd frontend
+          echo "📦 **Bundle Size Analysis**" >> bundle-report.md
+          echo "" >> bundle-report.md
+          echo "| File | Size |" >> bundle-report.md
+          echo "|------|------|" >> bundle-report.md
+          find dist -name "*.js" -exec ls -lh {} \; | awk '{print "| " $9 " | " $5 " |"}' >> bundle-report.md
+          echo "" >> bundle-report.md
+          echo "Total bundle size: $(du -sh dist | cut -f1)" >> bundle-report.md
+      
+      - name: Comment bundle analysis
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const bundleReport = fs.readFileSync('frontend/bundle-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: bundleReport
+            });
