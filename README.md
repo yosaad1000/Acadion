@@ -8,6 +8,8 @@
 
 A modern, comprehensive student management system with AI-powered facial recognition attendance tracking. Built with cutting-edge technologies for educational institutions of all sizes.
 
+<!-- CI/CD Pipeline Test - 2025-10-16 -->
+
 ## ✨ Key Features
 
 ### 🔐 Secure Authentication
