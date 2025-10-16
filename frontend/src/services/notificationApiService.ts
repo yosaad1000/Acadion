@@ -8,7 +8,10 @@ import {
 } from '../utils/errorHandling';
 
 // API configuration
-export const API_BASE_URL = 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD 
+    ? 'http://54.167.95.26:8000'  // Production backend (HTTP to avoid SSL issues)
+    : 'http://localhost:8000'); // Local development
 
 // Circuit breaker for notification API
 const notificationCircuitBreaker = new CircuitBreaker(3, 30000, 2);

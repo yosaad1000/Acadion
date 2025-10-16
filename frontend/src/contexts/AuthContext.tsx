@@ -298,6 +298,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ? 'https://acadion-gamma.vercel.app/auth/callback'
       : `${window.location.origin}/auth/callback`;
     
+    console.log('🔍 OAuth redirect URL:', redirectUrl);
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
