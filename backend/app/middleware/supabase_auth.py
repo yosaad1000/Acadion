@@ -1,5 +1,6 @@
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Request
 from jose import jwt
 from app.settings import settings
 from app.services.local_supabase import LocalSupabase
@@ -7,10 +8,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # Don't auto-error, let us handle it
 db = LocalSupabase()
 
-async def get_current_user_supabase(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user_supabase(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
     """
     Verify Supabase JWT token and get user from our users table
     """
@@ -22,8 +23,13 @@ async def get_current_user_supabase(credentials: HTTPAuthorizationCredentials = 
     
     try:
         logger.info("🚀 Authentication middleware called")
+        logger.info(f"📋 Request headers: {dict(request.headers)}")
+        
         if not credentials:
-            logger.error("❌ No credentials provided")
+            logger.error("❌ No credentials provided by HTTPBearer")
+            # Check if Authorization header exists manually
+            auth_header = request.headers.get("authorization")
+            logger.info(f"🔍 Manual auth header check: {auth_header[:50] if auth_header else 'None'}...")
             raise credentials_exception
         
         logger.info(f"🔑 Received token: {credentials.credentials[:50]}...")
