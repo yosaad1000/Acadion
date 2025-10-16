@@ -67,10 +67,32 @@ jobs:
         
         echo "🚀 Starting backend deployment..."
         
-        # Navigate to project directory
-        cd /home/ec2-user/acadion || { echo "Project directory not found"; exit 1; }
+        # Install git if not present
+        if ! command -v git &> /dev/null; then
+            echo "📦 Installing git..."
+            sudo yum install -y git
+        fi
+        
+        # Install docker-compose if not present
+        if ! command -v docker-compose &> /dev/null; then
+            echo "📦 Installing docker-compose..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+        fi
+        
+        # Create and navigate to project directory
+        mkdir -p /home/ec2-user/acadion
+        cd /home/ec2-user/acadion
+        
+        # Initialize git repository if not exists
+        if [ ! -d ".git" ]; then
+            echo "🔧 Initializing git repository..."
+            git init
+            git remote add origin https://github.com/yosaad1000/Acadion.git
+        fi
         
         # Pull latest changes
+        echo "📥 Pulling latest changes..."
         git fetch origin
         git reset --hard origin/main
         
