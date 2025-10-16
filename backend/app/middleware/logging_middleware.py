@@ -13,7 +13,7 @@ from app.config.logging import (
     log_request_start,
     log_request_end
 )
-from app.services.cloudwatch_metrics import cloudwatch_metrics
+from app.services.cloudwatch_metrics import get_cloudwatch_metrics
 
 logger = get_logger(__name__)
 
@@ -65,7 +65,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             )
             
             # Record metrics to CloudWatch
-            cloudwatch_metrics.record_api_request(
+            get_cloudwatch_metrics().record_api_request(
                 endpoint=str(request.url.path),
                 method=request.method,
                 status_code=response.status_code,

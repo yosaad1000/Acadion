@@ -235,5 +235,12 @@ class CloudWatchMetrics:
             dimensions={'QueueName': queue_name}
         )
 
-# Global instance
-cloudwatch_metrics = CloudWatchMetrics()
+# Global instance - lazy initialization
+cloudwatch_metrics = None
+
+def get_cloudwatch_metrics():
+    """Get CloudWatch metrics instance with lazy initialization"""
+    global cloudwatch_metrics
+    if cloudwatch_metrics is None:
+        cloudwatch_metrics = CloudWatchMetrics()
+    return cloudwatch_metrics
