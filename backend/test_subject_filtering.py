@@ -25,7 +25,8 @@ async def test_subject_filtering():
     
     try:
         # Initialize services
-        face_service = FaceRecognitionService()
+        from app.services.face_recognition import get_face_recognition_service
+        face_service = get_face_recognition_service()
         storage_service = StorageService()
         
         print("✅ Services initialized successfully")

@@ -238,14 +238,14 @@ async def join_subject(
         
         # Update face encoding with new subject enrollment
         try:
-            from app.services.face_recognition import face_recognition_service
+            from app.services.face_recognition import get_face_recognition_service
             
             # Get all subjects the student is now enrolled in
             all_subjects = await db.get_student_subjects(current_user.auth_user_id)
             subject_ids = [subj['subject_id'] for subj in all_subjects]
             
             # Update the face encoding metadata in Pinecone
-            success = face_recognition_service.update_face_encoding_subjects(current_user.auth_user_id, subject_ids)
+            success = get_face_recognition_service().update_face_encoding_subjects(current_user.auth_user_id, subject_ids)
             if success:
                 logger.info(f"Updated face encoding subjects for student {current_user.auth_user_id}: {subject_ids}")
             else:

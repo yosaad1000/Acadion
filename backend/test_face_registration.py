@@ -12,7 +12,7 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-from app.services.face_recognition import face_recognition_service
+from app.services.face_recognition import get_face_recognition_service
 from app.services.local_supabase import LocalSupabase
 import logging
 
@@ -30,9 +30,10 @@ async def test_face_registration():
     print("\n1️⃣ Testing Pinecone Connection...")
     try:
         # Get index stats
-        stats = face_recognition_service.index.describe_index_stats()
+        service = get_face_recognition_service()
+        stats = service.index.describe_index_stats()
         print(f"✅ Pinecone connected successfully")
-        print(f"   - Index: {face_recognition_service.index._config.name}")
+        print(f"   - Index: {service.index._config.name}")
         print(f"   - Total vectors: {stats.total_vector_count}")
         print(f"   - Dimension: {stats.dimension}")
     except Exception as e:
@@ -60,7 +61,7 @@ async def test_face_registration():
         test_student_id = "test_student_123"
         
         # Store the encoding
-        success = face_recognition_service.store_face_encoding(
+        success = get_face_recognition_service().store_face_encoding(
             student_id=test_student_id,
             encoding=dummy_encoding,
             subject_ids=["test_subject_1", "test_subject_2"]
@@ -70,7 +71,7 @@ async def test_face_registration():
             print(f"✅ Face encoding stored successfully for {test_student_id}")
             
             # Try to retrieve it
-            match_result = face_recognition_service.find_matching_student(dummy_encoding)
+            match_result = get_face_recognition_service().find_matching_student(dummy_encoding)
             if match_result:
                 matched_id, similarity = match_result
                 print(f"✅ Face encoding retrieved successfully")
@@ -78,7 +79,7 @@ async def test_face_registration():
                 print(f"   - Similarity score: {similarity:.4f}")
                 
                 # Clean up - delete the test encoding
-                face_recognition_service.delete_face_encoding(test_student_id)
+                get_face_recognition_service().delete_face_encoding(test_student_id)
                 print(f"🧹 Test encoding cleaned up")
             else:
                 print(f"❌ Could not retrieve stored face encoding")
