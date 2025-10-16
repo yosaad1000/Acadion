@@ -32,8 +32,8 @@ class AttendanceResponse(AttendanceBase):
 
     class Config:
         from_attributes = True
-#
- Async Attendance Models
+
+# Async Attendance Models
 
 class AttendanceJobResponse(BaseModel):
     """Response model for attendance job submission"""
