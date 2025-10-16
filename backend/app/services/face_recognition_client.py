@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import httpx
 from pydantic import BaseModel
 
-from ..config import settings
+from ..settings import settings
 from ..config.logging import get_logger, log_business_event, log_error_with_context
 
 logger = get_logger(__name__)
