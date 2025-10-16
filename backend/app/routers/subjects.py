@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import List
 from datetime import datetime
 from app.models.subject import SubjectCreate, SubjectUpdate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse
@@ -35,11 +35,25 @@ async def test_endpoint():
     return {"message": "Test endpoint working", "status": "success"}
 
 @router.post("/debug")
-async def debug_create_subject(subject: SubjectCreate):
+async def debug_create_subject(subject: SubjectCreate, request: Request):
     """Debug endpoint without authentication to test frontend connectivity"""
-    logger.info("🐛 Debug create subject called - no auth required")
+    from fastapi import Request
+    logger.info("� DRebug create subject called - no auth required")
     logger.info(f"📝 Received data: {subject}")
-    return {"message": "Debug endpoint reached", "data": subject.dict(), "status": "success"}
+    logger.info(f"🔍 Request headers: {dict(request.headers)}")
+    logger.info(f"🌐 Request URL: {request.url}")
+    
+    # Check for Authorization header specifically
+    auth_header = request.headers.get("authorization")
+    logger.info(f"🔑 Authorization header: {auth_header[:50] if auth_header else 'MISSING'}...")
+    
+    return {
+        "message": "Debug endpoint reached", 
+        "data": subject.dict(), 
+        "status": "success",
+        "has_auth_header": bool(auth_header),
+        "headers_count": len(request.headers)
+    }
 
 @router.post("", response_model=SubjectResponse)
 async def create_subject(
