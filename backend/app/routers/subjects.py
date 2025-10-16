@@ -28,11 +28,18 @@ def get_notification_service():
             _notification_service = False  # Mark as failed
     return _notification_service if _notification_service is not False else None
 
-@router.post("/test", response_model=dict)
+@router.post("/test")
 async def test_endpoint():
     """Test endpoint without authentication"""
     logger.info("🧪 Test endpoint called - no auth required")
     return {"message": "Test endpoint working", "status": "success"}
+
+@router.post("/debug")
+async def debug_create_subject(subject: SubjectCreate):
+    """Debug endpoint without authentication to test frontend connectivity"""
+    logger.info("🐛 Debug create subject called - no auth required")
+    logger.info(f"📝 Received data: {subject}")
+    return {"message": "Debug endpoint reached", "data": subject.dict(), "status": "success"}
 
 @router.post("", response_model=SubjectResponse)
 async def create_subject(
