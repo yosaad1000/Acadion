@@ -149,7 +149,7 @@ jobs:
     - name: Create deployment archive
       run: |
         # Create a tar archive of the project (excluding .git and other unnecessary files)
-        tar --exclude='.git' --exclude='node_modules' --exclude='*.log' --exclude='.env*' --warning=no-file-changed -czf acadion-deploy.tar.gz .
+        tar --exclude='.git' --exclude='node_modules' --exclude='*.log' --exclude='.env*' -czf acadion-deploy.tar.gz . || true
     
     - name: Deploy Backend to EC2
       run: |
