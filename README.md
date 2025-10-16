@@ -221,7 +221,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ for modern education**
+**Built with ❤️ for modern education - CI/CD Pipeline Active! 🚀**
 
 [⭐ Star this repo](https://github.com/yosaad1000/Acadion) • [🐛 Report Bug](https://github.com/yosaad1000/Acadion/issues) • [✨ Request Feature](https://github.com/yosaad1000/Acadion/issues)
 
