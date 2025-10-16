@@ -47,7 +47,7 @@ jobs:
     
     - name: Build Docker image
       run: |
-        docker build -t acadion-backend ./backend
+        docker build -f Dockerfile.backend -t acadion-backend .
         docker run --rm acadion-backend python -c "import main; print('✅ Backend builds successfully')"
 
   deploy-backend:
