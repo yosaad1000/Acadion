@@ -14,9 +14,9 @@ on:
         description: 'Reason for rollback'
         required: true
         type: string
-  schedule:
-    # Run health checks every 5 minutes
-    - cron: '*/5 * * * *'
+  # schedule:
+    # Run health checks every 5 minutes - DISABLED for EC2 deployment
+    # - cron: '*/5 * * * *'
 
 env:
   AWS_REGION: us-east-1
