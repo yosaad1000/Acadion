@@ -49,6 +49,13 @@ A modern, comprehensive student management system with AI-powered facial recogni
 - **[Vite](https://vitejs.dev/)** - Lightning-fast build tool
 - **[React Query](https://tanstack.com/query)** - Powerful data synchronization
 
+### Infrastructure & Deployment
+- **[AWS EC2](https://aws.amazon.com/ec2/)** - Backend hosting with Docker containers
+- **[Vercel](https://vercel.com/)** - Frontend hosting with edge network
+- **[GitHub Actions](https://github.com/features/actions)** - CI/CD pipelines
+- **[Docker](https://www.docker.com/)** - Containerization and deployment
+- **[Nginx](https://nginx.org/)** - Reverse proxy with SSL termination
+
 ### Infrastructure
 - **[Docker](https://www.docker.com/)** - Containerized deployment
 - **[Nginx](https://nginx.org/)** - High-performance web server
@@ -99,6 +106,40 @@ docker-compose ps
 - **📡 API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **🔍 Health Check**: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 
+## 🚀 Production Deployment
+
+Acadion is production-ready with automated CI/CD pipelines for both frontend and backend components.
+
+### Live Production URLs
+- **🌐 Frontend**: [https://acadion-gamma.vercel.app](https://acadion-gamma.vercel.app)
+- **📡 Backend API**: [https://54.167.95.26](https://54.167.95.26)
+- **📚 API Documentation**: [https://54.167.95.26/docs](https://54.167.95.26/docs)
+
+### Automated Deployments
+- **Frontend**: Deployed to Vercel with automatic HTTPS and global CDN
+- **Backend**: Deployed to AWS EC2 with Docker containers and Nginx SSL
+- **CI/CD**: GitHub Actions workflows for testing, building, and deployment
+- **Preview Deployments**: Automatic preview URLs for pull requests
+
+### Manual Deployment Scripts
+```bash
+# Deploy backend to EC2
+./deploy-backend.ps1
+
+# Deploy frontend to Vercel  
+./deploy-vercel.ps1
+
+# Setup HTTPS on EC2
+./ssl-setup.sh
+```
+
+### Environment Configuration
+- **Production Environment Variables**: Managed via GitHub Secrets and Vercel
+- **SSL Certificates**: Automatic HTTPS on both frontend and backend
+- **Health Monitoring**: Automated health checks and deployment notifications
+
+For detailed deployment instructions, see [CI/CD Guidelines](.kiro/steering/ci-cd-guidelines.md).
+
 ## 📖 Documentation
 
 - **[📚 Complete Documentation](https://yosaad1000.github.io/Acadion/)** - GitHub Pages
@@ -106,6 +147,7 @@ docker-compose ps
 - **[📡 API Reference](docs/api-documentation.md)** - Comprehensive API documentation
 - **[🏗️ Architecture Guide](docs/architecture.md)** - System design and components
 - **[🤖 AI Agents Guide](agents.md)** - For AI-assisted development
+- **[⚙️ CI/CD Guidelines](.kiro/steering/ci-cd-guidelines.md)** - Deployment and DevOps guide
 
 ## 🎯 Use Cases
 
