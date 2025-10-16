@@ -1,10 +1,7 @@
 name: Deploy Full Stack (Backend + Frontend)
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  # Only trigger manually to avoid conflicts with specific workflows
   workflow_dispatch:
 
 env:
