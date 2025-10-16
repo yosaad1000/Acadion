@@ -274,8 +274,8 @@ async def register_face(
         image_data = await file.read()
         
         # Process face encoding with Pinecone
-        from app.services.face_recognition import face_recognition_service
-        result = face_recognition_service.process_student_photo(current_user.user_id, image_data)
+        from app.services.face_recognition import get_face_recognition_service
+        result = get_face_recognition_service().process_student_photo(current_user.user_id, image_data)
         
         if result["success"]:
             # Update user's face registration status

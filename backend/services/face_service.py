@@ -137,5 +137,13 @@ class FaceRecognitionService:
             logger.error(f"Error converting image to base64: {e}")
             return ""
 
-# Global instance
-face_service = FaceRecognitionService()
+# Global instance - lazy initialization
+face_service = None
+
+def get_face_service():
+    """Get face service instance with lazy initialization"""
+    global face_service
+    if face_service is None:
+        from app.services.face_recognition import FaceRecognitionService
+        face_service = FaceRecognitionService()
+    return face_service

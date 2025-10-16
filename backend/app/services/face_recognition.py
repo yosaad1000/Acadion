@@ -393,5 +393,12 @@ class FaceRecognitionService:
                 "faces_unrecognized": 0
             }
 
-# Global instance
-face_recognition_service = FaceRecognitionService()
+# Global instance - lazy initialization
+face_recognition_service = None
+
+def get_face_recognition_service():
+    """Get face recognition service instance with lazy initialization"""
+    global face_recognition_service
+    if face_recognition_service is None:
+        face_recognition_service = FaceRecognitionService()
+    return face_recognition_service

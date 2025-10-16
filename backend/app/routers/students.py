@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
 import logging
-from ..services.face_recognition import face_recognition_service
+from ..services.face_recognition import get_face_recognition_service
 from ..models.user import UserResponse
 from ..middleware.supabase_auth import get_current_user_supabase as get_current_user
 
@@ -171,7 +171,7 @@ async def upload_student_photo(student_id: str, file: UploadFile = File(...)):
                 student_subjects = []
         
         # Process face encoding with subject metadata
-        result = face_recognition_service.process_student_photo(student_id, image_data, student_subjects)
+        result = get_face_recognition_service().process_student_photo(student_id, image_data, student_subjects)
         
         if result["success"]:
             # Update student record with face encoding status
@@ -205,7 +205,7 @@ async def recognize_student(file: UploadFile = File(...)):
         image_data = await file.read()
         
         # Recognize student
-        result = face_recognition_service.recognize_student(image_data)
+        result = get_face_recognition_service().recognize_student(image_data)
         
         if result["success"]:
             student_id = result["student_id"]
@@ -255,7 +255,7 @@ async def delete_student(student_id: str):
                 raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
             
             # Delete face encoding from Pinecone
-            face_recognition_service.delete_face_encoding(student_id)
+            get_face_recognition_service().delete_face_encoding(student_id)
             
             # Delete student from database
             success = await db.delete_student(student_id)

@@ -323,10 +323,10 @@ class FaceRecognitionClient:
             logger.info("Using fallback face recognition processing")
             
             # Import the original face recognition service
-            from .face_recognition import face_recognition_service
+            from .face_recognition import get_face_recognition_service
             
             # Use the original service as fallback
-            result = face_recognition_service.recognize_student(image_data, subject_id)
+            result = get_face_recognition_service().recognize_student(image_data, subject_id)
             
             # Convert to new response format
             return FaceRecognitionResponse(
@@ -371,10 +371,10 @@ class FaceRecognitionClient:
             logger.info("Using fallback face registration")
             
             # Import the original face recognition service
-            from .face_recognition import face_recognition_service
+            from .face_recognition import get_face_recognition_service
             
             # Use the original service as fallback
-            result = face_recognition_service.process_student_photo(user_id, image_data, subject_ids)
+            result = get_face_recognition_service().process_student_photo(user_id, image_data, subject_ids)
             
             return FaceRegistrationResponse(
                 success=result.get("success", False),
