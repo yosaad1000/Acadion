@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Session, SessionCreate, SessionUpdate } from '../types';
 import { sessionService } from '../services/sessionService';
+import { useNetworkErrorHandler } from './useNetworkErrorHandler';
 
 export const useSessions = (subjectId?: string) => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const networkErrorHandler = useNetworkErrorHandler({
+    onNetworkRestore: () => {
+      // Automatically refetch sessions when network is restored
+      if (subjectId) {
+        fetchSessions(subjectId);
+      }
+    }
+  });
 
   const fetchSessions = async (id?: string) => {
     if (!id && !subjectId) return;
@@ -14,10 +24,21 @@ export const useSessions = (subjectId?: string) => {
     setError(null);
     
     try {
-      const fetchedSessions = await sessionService.getSessionsBySubject(id || subjectId!);
-      setSessions(fetchedSessions);
+      // Use network error handling wrapper
+      const fetchedSessions = await networkErrorHandler.withNetworkErrorHandling(
+        () => sessionService.getSessionsBySubjectWithErrors(id || subjectId!),
+        [] // Fallback to empty array for network errors
+      );
+      
+      if (fetchedSessions !== undefined) {
+        setSessions(fetchedSessions);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
+      // Only set error if it's not a network error (network errors are handled by the error handler)
+      if (!networkErrorHandler.handleNetworkError(err)) {
+        const errorMessage = sessionService.getErrorMessage(err);
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -33,16 +54,22 @@ export const useSessions = (subjectId?: string) => {
     setError(null);
 
     try {
-      const newSession = await sessionService.createSession(subjectId, sessionData);
+      // Use network error handling wrapper
+      const newSession = await networkErrorHandler.withNetworkErrorHandling(
+        () => sessionService.createSessionWithErrors(subjectId, sessionData)
+      );
+      
       if (newSession) {
         setSessions(prev => [newSession, ...prev]);
         return newSession;
-      } else {
-        setError('Failed to create session');
-        return null;
       }
+      return null;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create session');
+      // Only set error if it's not a network error
+      if (!networkErrorHandler.handleNetworkError(err)) {
+        const errorMessage = sessionService.getErrorMessage(err);
+        setError(errorMessage);
+      }
       return null;
     } finally {
       setLoading(false);
@@ -110,5 +137,9 @@ export const useSessions = (subjectId?: string) => {
     updateSession,
     deleteSession,
     refetch: () => fetchSessions(subjectId),
+    networkError: networkErrorHandler.hasNetworkError,
+    isRetrying: networkErrorHandler.isRetrying,
+    retryNetwork: networkErrorHandler.retry,
+    clearNetworkError: networkErrorHandler.clearError,
   };
 };

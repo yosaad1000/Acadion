@@ -2,7 +2,7 @@ import httpx
 import logging
 from typing import Dict, Any, Optional, List
 from uuid import UUID
-from app.config import settings
+from app.settings import settings
 from app.models.google_integration import GoogleDriveFolder, GoogleDriveFile
 from app.services.google_oauth import google_integration_service
 

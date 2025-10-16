@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from app.config import settings
+from app.settings import settings
 from app.models.user import UserCreate, UserLogin, UserResponse, GoogleAuthRequest, AuthProvider
 from app.services.local_supabase import LocalSupabase
 from app.services.google_oauth import google_integration_service

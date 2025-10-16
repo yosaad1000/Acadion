@@ -6,6 +6,10 @@ class SubjectCreate(BaseModel):
     name: str
     description: Optional[str] = None
 
+class SubjectUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
 class SubjectResponse(BaseModel):
     subject_id: str
     subject_code: str

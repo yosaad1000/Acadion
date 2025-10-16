@@ -7,7 +7,7 @@ from app.models.notification import NotificationCreate, NotificationType
 from app.middleware.supabase_auth import get_current_user_supabase
 from app.services.local_supabase import LocalSupabase
 from app.services.notification_service import NotificationService
-# from app.services.face_recognition import face_recognition_service
+from app.services.face_recognition_client import face_recognition_client
 import logging
 
 router = APIRouter()
@@ -81,9 +81,9 @@ async def mark_attendance_by_face(
         # Read image data
         image_data = await file.read()
         
-        # Recognize student using face recognition (filtered by subject)
-        from app.services.face_recognition import face_recognition_service
-        result = face_recognition_service.recognize_student(image_data, subject_id)
+        # Recognize student using face recognition microservice (filtered by subject)
+        result_response = await face_recognition_client.process_image(image_data, subject_id)
+        result = result_response.dict()
         
         print(f"🔍 Face recognition result: success={result.get('success')}")
         print(f"🔍 Recognized students count: {len(result.get('recognized_students', []))}")

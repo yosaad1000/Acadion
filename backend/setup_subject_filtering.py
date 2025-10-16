@@ -23,7 +23,7 @@ async def setup_subject_filtering():
         # Step 1: Check if services are accessible
         print("\n📋 Step 1: Checking system requirements...")
         
-        from app.config import settings
+        from app.settings import settings
         from app.services.face_migration_service import face_migration_service
         
         # Check Pinecone configuration

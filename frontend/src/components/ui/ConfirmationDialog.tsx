@@ -1,5 +1,16 @@
-import React from 'react';
-import { XMarkIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect } from 'react';
+import { 
+  ExclamationTriangleIcon,
+  XMarkIcon,
+  TrashIcon,
+  ExclamationCircleIcon
+} from '@heroicons/react/24/outline';
+
+interface CascadeEffect {
+  type: 'sessions' | 'students' | 'assignments' | 'attendance';
+  count: number;
+  description: string;
+}
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -7,10 +18,14 @@ interface ConfirmationDialogProps {
   onConfirm: () => void;
   title: string;
   message: string;
+  itemName: string;
+  itemType: 'session' | 'subject' | 'assignment';
+  cascadeEffects?: CascadeEffect[];
+  warnings?: string[];
+  loading?: boolean;
   confirmText?: string;
   cancelText?: string;
-  type?: 'danger' | 'warning' | 'info';
-  loading?: boolean;
+  isDangerous?: boolean;
 }
 
 const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
@@ -19,110 +34,228 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirm',
+  itemName,
+  itemType,
+  cascadeEffects = [],
+  warnings = [],
+  loading = false,
+  confirmText = 'Delete',
   cancelText = 'Cancel',
-  type = 'warning',
-  loading = false
+  isDangerous = true
 }) => {
+  const [confirmationInput, setConfirmationInput] = useState('');
+  const [isConfirmationValid, setIsConfirmationValid] = useState(false);
+
+  // Reset confirmation input when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setConfirmationInput('');
+      setIsConfirmationValid(false);
+    }
+  }, [isOpen]);
+
+  // Validate confirmation input
+  useEffect(() => {
+    if (isDangerous) {
+      setIsConfirmationValid(confirmationInput.trim() === itemName.trim());
+    } else {
+      setIsConfirmationValid(true);
+    }
+  }, [confirmationInput, itemName, isDangerous]);
+
   if (!isOpen) return null;
 
-  const typeStyles = {
-    danger: {
-      iconColor: 'text-red-600',
-      iconBg: 'bg-red-100',
-      confirmButton: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
-    },
-    warning: {
-      iconColor: 'text-yellow-600',
-      iconBg: 'bg-yellow-100',
-      confirmButton: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500',
-    },
-    info: {
-      iconColor: 'text-blue-600',
-      iconBg: 'bg-blue-100',
-      confirmButton: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
+  const handleConfirm = () => {
+    if (!loading && isConfirmationValid) {
+      onConfirm();
     }
   };
 
-  const styles = typeStyles[type];
-
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+  const handleClose = () => {
+    if (!loading) {
       onClose();
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
+  const getItemIcon = () => {
+    switch (itemType) {
+      case 'session':
+        return '📅';
+      case 'subject':
+        return '📚';
+      case 'assignment':
+        return '📝';
+      default:
+        return '📄';
+    }
+  };
+
+  const getCascadeIcon = (type: CascadeEffect['type']) => {
+    switch (type) {
+      case 'sessions':
+        return '📅';
+      case 'students':
+        return '👥';
+      case 'assignments':
+        return '📝';
+      case 'attendance':
+        return '✅';
+      default:
+        return '📄';
     }
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4"
-      onClick={handleBackdropClick}
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirmation-title"
-      aria-describedby="confirmation-message"
-    >
-      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto transition-colors">
         {/* Header */}
-        <div className="flex items-start p-6 pb-4">
-          <div className={`flex-shrink-0 mx-auto flex items-center justify-center h-12 w-12 rounded-full ${styles.iconBg} sm:mx-0 sm:h-10 sm:w-10`}>
-            <ExclamationTriangleIcon className={`h-6 w-6 ${styles.iconColor}`} aria-hidden="true" />
-          </div>
-          <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
-            <h3 
-              className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" 
-              id="confirmation-title"
-            >
-              {title}
-            </h3>
-            <div className="mt-2">
-              <p 
-                className="text-sm text-gray-500 dark:text-gray-400" 
-                id="confirmation-message"
-              >
-                {message}
+        <div className="flex items-start justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              {isDangerous ? (
+                <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
+              ) : (
+                <ExclamationCircleIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {title}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                This action cannot be undone
               </p>
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={loading}
-            className="ml-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 rounded-md p-1"
-            aria-label="Close dialog"
+            className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 disabled:opacity-50"
+            aria-label="Close"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
+        {/* Content */}
+        <div className="p-6 space-y-4">
+          {/* Main Message */}
+          <div className="flex items-start space-x-3">
+            <span className="text-2xl" role="img" aria-label={itemType}>
+              {getItemIcon()}
+            </span>
+            <div className="flex-1">
+              <p className="text-gray-900 dark:text-gray-100">
+                {message}
+              </p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-1">
+                "{itemName}"
+              </p>
+            </div>
+          </div>
+
+          {/* Cascade Effects */}
+          {cascadeEffects.length > 0 && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  This will also delete:
+                </h4>
+              </div>
+              <ul className="space-y-2">
+                {cascadeEffects.map((effect, index) => (
+                  <li key={index} className="flex items-center space-x-2 text-sm text-yellow-700 dark:text-yellow-300">
+                    <span role="img" aria-label={effect.type}>
+                      {getCascadeIcon(effect.type)}
+                    </span>
+                    <span>
+                      <strong>{effect.count}</strong> {effect.description}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Warnings */}
+          {warnings.length > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <ExclamationCircleIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <h4 className="text-sm font-medium text-red-800 dark:text-red-200">
+                  Important warnings:
+                </h4>
+              </div>
+              <ul className="space-y-1">
+                {warnings.map((warning, index) => (
+                  <li key={index} className="text-sm text-red-700 dark:text-red-300">
+                    • {warning}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Confirmation Input for Dangerous Actions */}
+          {isDangerous && (
+            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                To confirm deletion, type the {itemType} name below:
+              </p>
+              <p className="text-xs font-mono text-gray-500 dark:text-gray-500 mb-2">
+                {itemName}
+              </p>
+              <input
+                type="text"
+                value={confirmationInput}
+                onChange={(e) => setConfirmationInput(e.target.value)}
+                placeholder={`Type "${itemName}" to confirm`}
+                className={`w-full px-3 py-2 border rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                  confirmationInput && !isConfirmationValid
+                    ? 'border-red-300 dark:border-red-600'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
+                disabled={loading}
+                id="confirmation-input"
+              />
+              {confirmationInput && !isConfirmationValid && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  Please type the exact {itemType} name to confirm
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Actions */}
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end space-y-3 sm:space-y-0 sm:space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={loading}
-            className="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 order-2 sm:order-1"
           >
             {cancelText}
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className={`w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${styles.confirmButton}`}
+            onClick={handleConfirm}
+            disabled={loading || !isConfirmationValid}
+            className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center order-1 sm:order-2 ${
+              isDangerous 
+                ? 'bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600' 
+                : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'
+            }`}
           >
-            {loading ? (
+            {loading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            )}
+            {loading ? 'Deleting...' : (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Processing...
+                <TrashIcon className="h-4 w-4 mr-2" />
+                {confirmText}
               </>
-            ) : (
-              confirmText
             )}
           </button>
         </div>

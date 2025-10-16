@@ -86,6 +86,62 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+// Enhanced error handling types
+export interface ApiError {
+  message: string;
+  type: 'network' | 'permission' | 'notFound' | 'server' | 'validation' | 'unknown';
+  statusCode?: number;
+  retryable: boolean;
+  details?: string;
+  field?: string; // For field-specific validation errors
+}
+
+export interface ValidationError {
+  field: string;
+  message: string;
+  code: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+}
+
+// Network error states for UI components
+export interface NetworkErrorState {
+  hasError: boolean;
+  errorType: 'network' | 'permission' | 'notFound' | 'server' | 'validation' | 'unknown';
+  message: string;
+  retryable: boolean;
+  retryAction?: () => void;
+  dismissAction?: () => void;
+}
+
+// Form validation state
+export interface FormValidationState {
+  isValid: boolean;
+  isValidating: boolean;
+  errors: Record<string, string[]>;
+  touched: Record<string, boolean>;
+}
+
+// Enhanced session interfaces with validation
+export interface SessionFormData {
+  name: string;
+  description: string;
+  session_date: string;
+  session_time: string;
+}
+
+export interface SessionFormErrors {
+  name?: string;
+  description?: string;
+  session_date?: string;
+  session_time?: string;
+  general?: string;
+  errorType?: 'network' | 'permission' | 'validation' | 'server' | 'unknown';
+}
+
 // Notification Types
 export enum NotificationType {
   STUDENT_JOINED = 'student_joined',
@@ -178,10 +234,10 @@ export interface Assignment {
 }
 
 export interface SessionCreate {
-  name: string;
+  name?: string;  // Optional - will be auto-generated if not provided
   description?: string;
-  session_date?: string;
-  notes?: string;
+  session_date?: string;  // Optional - defaults to current date/time
+  // notes removed from creation - can be added after session is created
 }
 
 export interface SessionUpdate {

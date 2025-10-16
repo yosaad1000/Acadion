@@ -1,10 +1,10 @@
 """
 Simplified NotificationService that works without proxy issues
 """
-import logging
 from typing import List, Optional
 from datetime import datetime
-from app.config import settings
+from app.settings import settings
+from app.config.logging import get_logger, log_business_event, log_error_with_context
 from app.models.notification import (
     NotificationCreate, NotificationResponse, NotificationPreferenceResponse,
     NotificationType
@@ -20,7 +20,7 @@ class NotificationConnectionError(Exception):
 class NotificationServiceError(Exception):
     pass
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class NotificationService:
     """Simplified notification service using HTTP requests"""

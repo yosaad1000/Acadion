@@ -122,4 +122,91 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   );
 };
 
+// Session-specific empty state components
+export const NoSessionsEmptyState: React.FC<{
+  onCreateSession?: () => void;
+  isTeacher?: boolean;
+  className?: string;
+}> = ({ onCreateSession, isTeacher = false, className }) => (
+  <EmptyState
+    icon={
+      <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V6a2 2 0 012-2h4a2 2 0 012 2v1m-6 0h8m-8 0H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-2" />
+      </svg>
+    }
+    title="No Sessions Yet"
+    description={
+      isTeacher 
+        ? "Create your first session to start organizing class content and activities. Sessions help you manage attendance, assignments, and class notes."
+        : "Sessions will appear here once your teacher creates them. Sessions contain class materials, assignments, and attendance records."
+    }
+    action={
+      isTeacher && onCreateSession ? {
+        label: "Create First Session",
+        onClick: onCreateSession,
+        variant: "primary"
+      } : undefined
+    }
+    secondaryAction={
+      isTeacher ? {
+        label: "Learn about sessions",
+        onClick: () => {
+          // Open help documentation or tutorial
+          window.open('/docs/sessions', '_blank');
+        }
+      } : undefined
+    }
+    className={className}
+    size="lg"
+  />
+);
+
+export const NoStudentsEmptyState: React.FC<{
+  inviteCode?: string;
+  className?: string;
+}> = ({ inviteCode, className }) => (
+  <EmptyState
+    icon={
+      <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+      </svg>
+    }
+    title="No Students Yet"
+    description={
+      inviteCode 
+        ? `Share the invite code "${inviteCode}" with your students so they can join this class.`
+        : "Students will appear here once they join your class using the invite code."
+    }
+    className={className}
+  />
+);
+
+export const NoAssignmentsEmptyState: React.FC<{
+  onCreateAssignment?: () => void;
+  isTeacher?: boolean;
+  className?: string;
+}> = ({ onCreateAssignment, isTeacher = false, className }) => (
+  <EmptyState
+    icon={
+      <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    }
+    title="No Assignments Yet"
+    description={
+      isTeacher 
+        ? "Create assignments to give students tasks, homework, or projects related to this session."
+        : "Assignments will appear here when your teacher adds them to this session."
+    }
+    action={
+      isTeacher && onCreateAssignment ? {
+        label: "Create Assignment",
+        onClick: onCreateAssignment,
+        variant: "primary"
+      } : undefined
+    }
+    className={className}
+  />
+);
+
 export default EmptyState;

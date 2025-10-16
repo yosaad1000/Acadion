@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from supabase import create_client, Client
 from postgrest.exceptions import APIError
-from app.config import settings
+from app.settings import settings
 from app.models.notification import (
     NotificationCreate, 
     NotificationResponse, 

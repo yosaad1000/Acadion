@@ -127,4 +127,111 @@
   .text-responsive-3xl {
     @apply text-3xl sm:text-4xl lg:text-5xl;
   }
+  
+  /* Mobile-specific animations */
+  .animate-in {
+    animation-fill-mode: both;
+  }
+  
+  .slide-in-from-top-2 {
+    animation: slideInFromTop 0.2s ease-out;
+  }
+  
+  @keyframes slideInFromTop {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Better mobile scrolling */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Mobile-friendly focus states */
+  .focus-mobile {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800;
+  }
+  
+  /* Touch-friendly spacing */
+  .touch-spacing {
+    @apply space-y-4 sm:space-y-3;
+  }
+  
+  /* Mobile card layouts */
+  .mobile-card-grid {
+    @apply grid grid-cols-1 gap-4 sm:gap-6;
+  }
+  
+  /* Better mobile typography */
+  .mobile-heading {
+    @apply text-lg sm:text-xl font-semibold leading-tight;
+  }
+  
+  .mobile-subheading {
+    @apply text-base sm:text-lg font-medium leading-snug;
+  }
+  
+  .mobile-body {
+    @apply text-sm sm:text-base leading-relaxed;
+  }
+  
+  .mobile-caption {
+    @apply text-xs sm:text-sm leading-normal;
+  }
+  
+  /* Mobile-optimized line clamping */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  
+  /* Mobile-friendly modal positioning */
+  .mobile-modal {
+    @apply fixed inset-0 flex items-end sm:items-center justify-center;
+  }
+  
+  .mobile-modal-content {
+    @apply w-full max-w-md mx-2 sm:mx-4 mb-0 sm:mb-auto rounded-t-lg sm:rounded-lg;
+  }
+  
+  /* Better mobile form layouts */
+  .mobile-form-group {
+    @apply space-y-4 sm:space-y-5;
+  }
+  
+  .mobile-form-row {
+    @apply grid grid-cols-1 sm:grid-cols-2 gap-4;
+  }
+  
+  /* Mobile-optimized button groups */
+  .mobile-button-group {
+    @apply flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3;
+  }
+  
+  .mobile-button-group-reverse {
+    @apply flex flex-col-reverse sm:flex-row space-y-3 space-y-reverse sm:space-y-0 sm:space-x-3;
+  }
 }

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List
 from datetime import datetime
-from app.models.subject import SubjectCreate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse
+from app.models.subject import SubjectCreate, SubjectUpdate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse
 from app.models.user import UserResponse
 from app.models.notification import NotificationCreate, NotificationType
 from app.middleware.supabase_auth import get_current_user_supabase as get_current_user
@@ -386,6 +386,46 @@ async def get_subject(
     except Exception as e:
         logger.error(f"Get subject error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get subject")
+
+@router.put("/{subject_id}", response_model=SubjectResponse)
+async def update_subject(
+    subject_id: str,
+    subject_update: SubjectUpdate,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Update a subject (Teachers only)"""
+    try:
+        if current_user.user_type != "teacher":
+            raise HTTPException(status_code=403, detail="Only teachers can update subjects")
+        
+        # Verify teacher owns this subject
+        subject = await db.get_subject_by_id(subject_id)
+        if not subject or subject["teacher_id"] != current_user.auth_user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Update subject
+        updated_subject = await db.update_subject(subject_id, subject_update.dict(exclude_unset=True))
+        if not updated_subject:
+            raise HTTPException(status_code=500, detail="Failed to update subject")
+        
+        return SubjectResponse(
+            subject_id=updated_subject["subject_id"],
+            subject_code=updated_subject.get("subject_code", ""),
+            name=updated_subject["name"],
+            description=updated_subject.get("description"),
+            teacher_id=updated_subject["teacher_id"],
+            teacher_name=updated_subject["teacher_name"],
+            invite_code=updated_subject.get("invite_code", ""),
+            is_active=updated_subject["is_active"],
+            student_count=updated_subject.get("student_count", 0),
+            created_at=updated_subject["created_at"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update subject error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update subject")
 
 @router.delete("/{subject_id}")
 async def delete_subject(

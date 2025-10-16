@@ -239,24 +239,14 @@ const TakeAttendance: React.FC = () => {
       setFaceResults(result);
 
       if (response.ok && result.success) {
-        // DEBUG: Check what we have in the result
-        console.log('🔍 DEBUG: response.ok =', response.ok);
-        console.log('🔍 DEBUG: result.success =', result.success);
-        console.log('🔍 DEBUG: result.recognized_students =', result.recognized_students);
-        console.log('🔍 DEBUG: result.identified_students =', result.identified_students);
-
         // Try both recognized_students and identified_students (backend sends both)
         const studentsToUpdate = result.recognized_students || result.identified_students || [];
-
-        console.log('🔍 DEBUG: studentsToUpdate =', studentsToUpdate);
-        console.log('🔍 DEBUG: studentsToUpdate.length =', studentsToUpdate.length);
 
         // Update attendance for ALL recognized students
         if (studentsToUpdate && studentsToUpdate.length > 0) {
           const attendanceUpdates: any = {};
 
           studentsToUpdate.forEach((student: any) => {
-            console.log('🔍 DEBUG: Processing student:', student);
             attendanceUpdates[student.student_id] = {
               student_id: student.student_id,
               status: 'present',
@@ -268,38 +258,14 @@ const TakeAttendance: React.FC = () => {
             };
           });
 
-          console.log('🔍 DEBUG: attendanceUpdates =', attendanceUpdates);
-
-          setAttendance(prev => {
-            const newAttendance = {
-              ...prev,
-              ...attendanceUpdates
-            };
-            console.log('🔍 DEBUG: New attendance state =', newAttendance);
-            return newAttendance;
-          });
-
-          console.log(`✅ Updated attendance for ${studentsToUpdate.length} students`);
-        } else {
-          console.log('❌ DEBUG: No students to update!');
+          setAttendance(prev => ({
+            ...prev,
+            ...attendanceUpdates
+          }));
         }
-
-        // Log detailed results to console
-        console.log(`✅ SUCCESS: ${result.faces_detected} face(s) detected`);
-        console.log(`👥 Recognized: ${result.faces_recognized} students`);
-        console.log(`❓ Unrecognized: ${result.faces_unrecognized} faces`);
-        if (result.recognized_students) {
-          result.recognized_students.forEach((student: any, index: number) => {
-            console.log(`🎓 Student ${index + 1}: ${student.student_id} (${(student.similarity_score * 100).toFixed(1)}% confidence)`);
-          });
-        }
-      } else {
-        console.log(`❌ FAILED: ${result.message}`);
-        console.log(`👥 Faces detected: ${result.faces_detected || 0}`);
-        console.log(`❓ Unrecognized faces: ${result.faces_unrecognized || 0}`);
       }
     } catch (error) {
-      console.error('💥 Error processing photo:', error);
+      console.error('Error processing photo:', error);
       setFaceResults({
         success: false,
         message: 'Network error occurred',
@@ -313,21 +279,12 @@ const TakeAttendance: React.FC = () => {
   };
 
   const saveAttendance = async () => {
-    // VERY OBVIOUS DEBUG - This should always show
-    alert('🚨 SAVE ATTENDANCE FUNCTION CALLED! Check console now.');
-    
     setSaving(true);
     try {
-      // DEBUG: Show initial state
-      console.log('🔍 INITIAL ATTENDANCE STATE:', attendance);
-      console.log('🔍 STUDENTS LIST:', students.map(s => ({id: s.user_id, name: s.name})));
-      
       // Ensure all students have an attendance status (default to absent if not set)
       const completeAttendance = { ...attendance };
       students.forEach(student => {
         if (!completeAttendance[student.user_id]) {
-          console.log(`🔍 Setting ${student.user_id} to absent (no existing record)`);
-          // Only set to absent if no attendance record exists
           completeAttendance[student.user_id] = {
             student_id: student.user_id,
             status: 'absent',
@@ -336,39 +293,17 @@ const TakeAttendance: React.FC = () => {
             session_name: currentSession.session_name,
             session_time: currentSession.session_time
           };
-        } else {
-          console.log(`🔍 Student ${student.user_id} already has status: ${completeAttendance[student.user_id].status}`);
         }
       });
-      
-      console.log('🔍 COMPLETE ATTENDANCE AFTER PROCESSING:', completeAttendance);
 
       // Save ALL attendance records (present, absent, late)
       const attendanceRecords = Object.values(completeAttendance);
       
-      console.log('🔍 FRONTEND DEBUG: About to save attendance records:');
-      console.log(`Total records: ${attendanceRecords.length}`);
-      attendanceRecords.forEach((record, index) => {
-        console.log(`Record ${index + 1}: Student ${record.student_id} - Status: ${record.status}`);
-      });
-      
-      // DEBUG: Show what we're about to save
-      const statusBreakdown = attendanceRecords.reduce((acc, record) => {
-        acc[record.status] = (acc[record.status] || 0) + 1;
-        return acc;
-      }, {});
-      
-      // DEBUG: Show detailed breakdown
-      const debugInfo = attendanceRecords.map(r => `${r.student_id.slice(-4)}: ${r.status}`).join('\n');
-      alert(`About to save ${attendanceRecords.length} records:\n${JSON.stringify(statusBreakdown, null, 2)}\n\nStudents:\n${debugInfo}\n\nCheck console for details!`);
-
       let successCount = 0;
       let errorCount = 0;
       
       for (const record of attendanceRecords) {
         try {
-          console.log(`🔄 Saving student ${record.student_id} with status ${record.status}`);
-          
           const response = await fetch('http://localhost:8000/api/attendance/manual', {
             method: 'POST',
             headers: {
@@ -389,14 +324,13 @@ const TakeAttendance: React.FC = () => {
           });
           
           if (response.ok) {
-            console.log(`✅ Successfully saved ${record.student_id} as ${record.status}`);
             successCount++;
           } else {
-            console.error(`❌ Failed to save ${record.student_id}: ${response.status} ${response.statusText}`);
+            console.error(`Failed to save attendance for student ${record.student_id}: ${response.status}`);
             errorCount++;
           }
         } catch (error) {
-          console.error(`💥 Error saving ${record.student_id}:`, error);
+          console.error(`Error saving attendance for student ${record.student_id}:`, error);
           errorCount++;
         }
       }
@@ -407,13 +341,14 @@ const TakeAttendance: React.FC = () => {
       const lateRecords = attendanceRecords.filter(r => r.status === 'late').length;
       
       if (errorCount > 0) {
-        alert(`Attendance save completed with issues!\n${totalRecords} total records:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late\n\nResults:\n- ${successCount} saved successfully\n- ${errorCount} failed\n\nCheck console for details.`);
+        alert(`Attendance saved with some issues.\n${successCount} of ${totalRecords} records saved successfully.\n\nSummary:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late`);
       } else {
-        alert(`Attendance saved successfully!\n${totalRecords} total records:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late\n\nAll ${successCount} records saved!`);
+        alert(`Attendance saved successfully!\n\nSummary:\n- ${presentRecords} Present\n- ${absentRecords} Absent\n- ${lateRecords} Late`);
       }
       navigate(`/class/${classId}`);
     } catch (error) {
-      alert('Error saving attendance');
+      console.error('Error saving attendance:', error);
+      alert('Failed to save attendance. Please try again.');
     } finally {
       setSaving(false);
     }

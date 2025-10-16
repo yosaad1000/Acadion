@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from uuid import UUID
 import httpx
-from app.config import settings
+from app.settings import settings
 from app.models.assignment import (
     AssignmentCreate, AssignmentUpdate, AssignmentSubmissionCreate, 
     AssignmentSubmissionUpdate, SubmissionStatus
@@ -69,7 +69,7 @@ class AssignmentService:
                     headers=self.headers,
                     params={
                         "assignment_id": f"eq.{assignment_id}",
-                        "select": "*,session:sessions(name,subject_id,subject:subjects(name)),creator:users!created_by(name),submissions:assignment_submissions(*,student:users!student_id(name))"
+                        "select": "*,session:sessions(name,subject_id,subject:subjects(name)),submissions:assignment_submissions(*)"
                     }
                 )
                 
@@ -81,7 +81,7 @@ class AssignmentService:
                         session = assignment.get("session", {})
                         assignment["session_name"] = session.get("name", "")
                         assignment["subject_name"] = session.get("subject", {}).get("name", "")
-                        assignment["teacher_name"] = assignment.get("creator", {}).get("name", "")
+                        assignment["teacher_name"] = ""  # Will be populated by session data if needed
                         
                         # Check if overdue
                         if assignment.get("due_date"):
@@ -117,7 +117,7 @@ class AssignmentService:
                     headers={**self.headers, "Prefer": "count=exact"},
                     params={
                         "session_id": f"eq.{session_id}",
-                        "select": "*,creator:users!created_by(name),submissions:assignment_submissions(*)",
+                        "select": "*,submissions:assignment_submissions(*)",
                         "order": "due_date.asc.nullslast,created_at.desc",
                         "limit": page_size,
                         "offset": offset
@@ -131,7 +131,7 @@ class AssignmentService:
                     # Add computed fields
                     now = datetime.utcnow()
                     for assignment in assignments:
-                        assignment["teacher_name"] = assignment.get("creator", {}).get("name", "")
+                        assignment["teacher_name"] = ""  # Will be populated by session data if needed
                         
                         # Check if overdue
                         if assignment.get("due_date"):
@@ -219,7 +219,7 @@ class AssignmentService:
                     headers=self.headers,
                     params={
                         "assignment_id": f"eq.{assignment_id}",
-                        "select": "*,student:users!student_id(name,email),assignment:assignments(title,due_date)",
+                        "select": "*,assignment:assignments(title,due_date)",
                         "order": "submission_status.asc,student.name.asc"
                     }
                 )
@@ -227,7 +227,7 @@ class AssignmentService:
                 if response.status_code == 200:
                     submissions = response.json()
                     for submission in submissions:
-                        submission["student_name"] = submission.get("student", {}).get("name", "")
+                        submission["student_name"] = ""  # Will need to be populated separately if needed
                         submission["assignment_title"] = submission.get("assignment", {}).get("title", "")
                     
                     logger.info(f"✅ Retrieved {len(submissions)} submissions for assignment {assignment_id}")
@@ -300,7 +300,7 @@ class AssignmentService:
                         headers=self.headers,
                         params={
                             "submission_id": f"eq.{submission_id}",
-                            "select": "*,student:users!student_id(name),assignment:assignments(title)"
+                            "select": "*,assignment:assignments(title)"
                         }
                     )
                     if get_response.status_code == 200 and get_response.json():

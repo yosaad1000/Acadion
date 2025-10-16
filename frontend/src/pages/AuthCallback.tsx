@@ -17,16 +17,7 @@ const AuthCallback: React.FC = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const hasAuthParams = urlParams.has('code') || urlParams.has('access_token');
         
-        console.log('🔍 URL params check:', { 
-          hasAuthParams, 
-          code: urlParams.has('code'), 
-          access_token: urlParams.has('access_token'),
-          error: urlParams.get('error'),
-          error_description: urlParams.get('error_description'),
-          fullURL: window.location.href,
-          search: window.location.search,
-          hash: window.location.hash
-        });
+        // Check for authentication parameters
 
         let session = null;
 
@@ -55,7 +46,7 @@ const AuthCallback: React.FC = () => {
           console.log('✅ Session from code exchange:', session ? 'Success' : 'Failed');
         } else {
           // No auth params, just check for existing session
-          console.log('🔍 No auth params, checking existing session...');
+          // No auth params, check existing session
           const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
           
           if (sessionError) {

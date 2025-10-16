@@ -4,16 +4,17 @@ from datetime import datetime
 from uuid import UUID
 
 class SessionBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255, description="Session name")
+    name: Optional[str] = Field(None, max_length=255, description="Session name (auto-generated if not provided)")
     description: Optional[str] = Field(None, description="Session description")
-    session_date: Optional[datetime] = Field(None, description="Scheduled date and time for the session")
+    session_date: Optional[datetime] = Field(None, description="Scheduled date and time for the session (defaults to current time)")
     notes: Optional[str] = Field(None, description="Session notes")
 
     @validator('name')
     def validate_name(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Session name cannot be empty')
-        return v.strip()
+        # Allow None for auto-generation, but validate non-empty if provided
+        if v is not None and (not v or not v.strip()):
+            return None  # Convert empty strings to None for auto-generation
+        return v.strip() if v else v
 
 class SessionCreate(SessionBase):
     subject_id: UUID = Field(..., description="ID of the subject this session belongs to")

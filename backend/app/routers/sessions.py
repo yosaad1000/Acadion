@@ -35,11 +35,11 @@ async def create_session(
         
         # Verify teacher owns the subject
         subject = await db.get_subject_by_id(str(session.subject_id))
-        if not subject or subject["teacher_id"] != current_user.user_id:
+        if not subject or subject["teacher_id"] != current_user.auth_user_id:
             raise HTTPException(status_code=403, detail="Access denied - you don't own this subject")
         
-        # Create session
-        created_session = await session_service.create_session(session, UUID(current_user.user_id))
+        # Create session with smart defaults
+        created_session = await session_service.create_session_with_defaults(session, UUID(current_user.auth_user_id))
         if not created_session:
             raise HTTPException(status_code=500, detail="Failed to create session")
         
@@ -67,6 +67,70 @@ async def create_session(
         logger.error(f"Create session error: {e}")
         raise HTTPException(status_code=500, detail="Failed to create session")
 
+@router.get("/subject/{subject_id}", response_model=SessionListResponse)
+async def get_sessions_by_subject_id(
+    subject_id: UUID,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(50, ge=1, le=100, description="Page size"),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """Get sessions for a subject - cleaner REST endpoint"""
+    try:
+        # Verify access through subject
+        subject = await db.get_subject_by_id(str(subject_id))
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        
+        has_access = False
+        if current_user.user_type == "teacher" and subject["teacher_id"] == current_user.auth_user_id:
+            has_access = True
+        elif current_user.user_type == "student":
+            # Use auth_user_id directly for enrollment check (student_id in enrollments is auth_user_id)
+            logger.info(f"🔍 Student access check - auth_user_id: {current_user.auth_user_id}, subject_id: {subject_id}")
+            is_enrolled = await db.is_student_enrolled(str(subject_id), current_user.auth_user_id)
+            logger.info(f"📊 Enrollment check result: {is_enrolled}")
+            has_access = is_enrolled
+        
+        if not has_access:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Get sessions
+        result = await session_service.get_sessions_by_subject(subject_id, page, page_size)
+        
+        sessions = [
+            SessionResponse(
+                session_id=s["session_id"],
+                subject_id=s["subject_id"],
+                name=s["name"],
+                description=s.get("description"),
+                session_date=s.get("session_date"),
+                notes=s.get("notes"),
+                attendance_taken=s.get("attendance_taken", False),
+                created_by=s.get("created_by"),
+                created_at=s["created_at"],
+                updated_at=s["updated_at"],
+                assignments=s.get("assignments", []),
+                subject_name=s.get("subject_name", ""),
+                teacher_name=s.get("teacher_name", ""),
+                assignment_count=s.get("assignment_count", 0),
+                has_overdue_assignments=s.get("has_overdue_assignments", False)
+            )
+            for s in result["sessions"]
+        ]
+        
+        return SessionListResponse(
+            sessions=sessions,
+            total_count=result["total_count"],
+            page=result["page"],
+            page_size=result["page_size"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get sessions by subject error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get sessions")
+
 @router.get("", response_model=SessionListResponse)
 async def get_sessions(
     subject_id: UUID = Query(..., description="Subject ID to get sessions for"),
@@ -74,7 +138,7 @@ async def get_sessions(
     page_size: int = Query(50, ge=1, le=100, description="Page size"),
     current_user: UserResponse = Depends(get_current_user)
 ):
-    """Get sessions for a subject with pagination"""
+    """Get sessions for a subject with pagination (legacy endpoint)"""
     try:
         # Check user access to subject
         access_check = await session_service.check_user_access_to_session(
@@ -89,10 +153,13 @@ async def get_sessions(
             raise HTTPException(status_code=404, detail="Subject not found")
         
         has_access = False
-        if current_user.user_type == "teacher" and subject["teacher_id"] == current_user.user_id:
+        if current_user.user_type == "teacher" and subject["teacher_id"] == current_user.auth_user_id:
             has_access = True
         elif current_user.user_type == "student":
-            is_enrolled = await db.is_student_enrolled(str(subject_id), current_user.user_id)
+            # Use auth_user_id directly for enrollment check (student_id in enrollments is auth_user_id)
+            logger.info(f"🔍 Student access check (legacy) - auth_user_id: {current_user.auth_user_id}, subject_id: {subject_id}")
+            is_enrolled = await db.is_student_enrolled(str(subject_id), current_user.auth_user_id)
+            logger.info(f"📊 Enrollment check result (legacy): {is_enrolled}")
             has_access = is_enrolled
         
         if not has_access:
@@ -144,7 +211,7 @@ async def get_session(
     try:
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"]:
@@ -189,7 +256,7 @@ async def update_session(
         
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"] or not access_check.get("can_edit", False):
@@ -236,7 +303,7 @@ async def delete_session(
         
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"] or not access_check.get("can_edit", False):
@@ -273,14 +340,14 @@ async def create_assignment(
         
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"] or not access_check.get("can_edit", False):
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Create assignment
-        created_assignment = await assignment_service.create_assignment(assignment, UUID(current_user.user_id))
+        created_assignment = await assignment_service.create_assignment(assignment, UUID(current_user.auth_user_id))
         if not created_assignment:
             raise HTTPException(status_code=500, detail="Failed to create assignment")
         
@@ -320,7 +387,7 @@ async def get_session_assignments(
     try:
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"]:
@@ -374,7 +441,7 @@ async def get_assignment(
     try:
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"]:
@@ -428,7 +495,7 @@ async def update_assignment(
         
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"] or not access_check.get("can_edit", False):
@@ -482,7 +549,7 @@ async def delete_assignment(
         
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"] or not access_check.get("can_edit", False):
@@ -518,7 +585,7 @@ async def mark_attendance_taken(
         
         # Check user access to session
         access_check = await session_service.check_user_access_to_session(
-            session_id, UUID(current_user.user_id), current_user.user_type
+            session_id, UUID(current_user.auth_user_id if current_user.user_type == "teacher" else current_user.user_id), current_user.user_type
         )
         
         if not access_check["has_access"] or not access_check.get("can_edit", False):

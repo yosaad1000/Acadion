@@ -1,0 +1,301 @@
+name: Automated Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+  schedule:
+    # Run health checks every 5 minutes
+    - cron: '*/5 * * * *'
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  health-monitoring:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    strategy:
+      matrix:
+        environment: [staging, production]
+
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ matrix.environment == 'production' && secrets.AWS_ROLE_TO_ASSUME_PRODUCTION || secrets.AWS_ROLE_TO_ASSUME_STAGING }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Check application health
+      id: health-check
+      run: |
+        ENVIRONMENT="${{ matrix.environment }}"
+        
+        # Get ALB DNS name
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --names acadion-${ENVIRONMENT}-alb \
+          --query 'LoadBalancers[0].DNSName' \
+          --output text)
+        
+        # Health check with retries
+        HEALTH_CHECK_FAILED=false
+        
+        for i in {1..3}; do
+          if ! curl -f --max-time 10 "https://$ALB_DNS/api/health"; then
+            echo "❌ Health check attempt $i failed"
+            HEALTH_CHECK_FAILED=true
+          else
+            echo "✅ Health check attempt $i passed"
+            HEALTH_CHECK_FAILED=false
+            break
+          fi
+          sleep 10
+        done
+        
+        if [ "$HEALTH_CHECK_FAILED" = true ]; then
+          echo "health-status=failed" >> $GITHUB_OUTPUT
+          echo "❌ All health checks failed for $ENVIRONMENT"
+        else
+          echo "health-status=passed" >> $GITHUB_OUTPUT
+          echo "✅ Health checks passed for $ENVIRONMENT"
+        fi
+
+    - name: Check ECS service health
+      id: ecs-check
+      run: |
+        ENVIRONMENT="${{ matrix.environment }}"
+        CLUSTER_NAME="acadion-${ENVIRONMENT}-cluster"
+        
+        # Check service status
+        SERVICES=("acadion-backend-${ENVIRONMENT}" "acadion-frontend-${ENVIRONMENT}" "acadion-face-recognition-${ENVIRONMENT}")
+        
+        for SERVICE in "${SERVICES[@]}"; do
+          SERVICE_STATUS=$(aws ecs describe-services \
+            --cluster $CLUSTER_NAME \
+            --services $SERVICE \
+            --query 'services[0].status' \
+            --output text)
+          
+          RUNNING_COUNT=$(aws ecs describe-services \
+            --cluster $CLUSTER_NAME \
+            --services $SERVICE \
+            --query 'services[0].runningCount' \
+            --output text)
+          
+          DESIRED_COUNT=$(aws ecs describe-services \
+            --cluster $CLUSTER_NAME \
+            --services $SERVICE \
+            --query 'services[0].desiredCount' \
+            --output text)
+          
+          if [[ "$SERVICE_STATUS" != "ACTIVE" ]] || [[ "$RUNNING_COUNT" -lt "$DESIRED_COUNT" ]]; then
+            echo "❌ Service $SERVICE is unhealthy: Status=$SERVICE_STATUS, Running=$RUNNING_COUNT, Desired=$DESIRED_COUNT"
+            echo "ecs-status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ Service $SERVICE is healthy: Running=$RUNNING_COUNT, Desired=$DESIRED_COUNT"
+          fi
+        done
+        
+        echo "ecs-status=passed" >> $GITHUB_OUTPUT
+
+    - name: Trigger automatic rollback
+      if: steps.health-check.outputs.health-status == 'failed' || steps.ecs-check.outputs.ecs-status == 'failed'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const { data: workflow } = await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'automated-rollback.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ matrix.environment }}',
+              reason: 'Automatic rollback triggered by health check failure'
+            }
+          });
+          
+          console.log('Automatic rollback triggered for ${{ matrix.environment }}');
+
+  execute-rollback:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment }}
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ github.event.inputs.environment == 'production' && secrets.AWS_ROLE_TO_ASSUME_PRODUCTION || secrets.AWS_ROLE_TO_ASSUME_STAGING }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Get current deployment info
+      id: current-info
+      run: |
+        ENVIRONMENT="${{ github.event.inputs.environment }}"
+        CLUSTER_NAME="acadion-${ENVIRONMENT}-cluster"
+        
+        # Get current task definition revisions
+        BACKEND_CURRENT=$(aws ecs describe-services \
+          --cluster $CLUSTER_NAME \
+          --services acadion-backend-${ENVIRONMENT} \
+          --query 'services[0].taskDefinition' \
+          --output text | grep -o '[0-9]*$')
+        
+        FRONTEND_CURRENT=$(aws ecs describe-services \
+          --cluster $CLUSTER_NAME \
+          --services acadion-frontend-${ENVIRONMENT} \
+          --query 'services[0].taskDefinition' \
+          --output text | grep -o '[0-9]*$')
+        
+        FACE_RECOGNITION_CURRENT=$(aws ecs describe-services \
+          --cluster $CLUSTER_NAME \
+          --services acadion-face-recognition-${ENVIRONMENT} \
+          --query 'services[0].taskDefinition' \
+          --output text | grep -o '[0-9]*$')
+        
+        echo "backend-current=$BACKEND_CURRENT" >> $GITHUB_OUTPUT
+        echo "frontend-current=$FRONTEND_CURRENT" >> $GITHUB_OUTPUT
+        echo "face-recognition-current=$FACE_RECOGNITION_CURRENT" >> $GITHUB_OUTPUT
+        
+        echo "Current revisions - Backend: $BACKEND_CURRENT, Frontend: $FRONTEND_CURRENT, Face Recognition: $FACE_RECOGNITION_CURRENT"
+
+    - name: Execute rollback
+      run: |
+        ENVIRONMENT="${{ github.event.inputs.environment }}"
+        CLUSTER_NAME="acadion-${ENVIRONMENT}-cluster"
+        
+        # Calculate previous revisions
+        BACKEND_PREVIOUS=$((${{ steps.current-info.outputs.backend-current }} - 1))
+        FRONTEND_PREVIOUS=$((${{ steps.current-info.outputs.frontend-current }} - 1))
+        FACE_RECOGNITION_PREVIOUS=$((${{ steps.current-info.outputs.face-recognition-current }} - 1))
+        
+        echo "🔄 Rolling back to previous revisions..."
+        echo "Backend: ${{ steps.current-info.outputs.backend-current }} -> $BACKEND_PREVIOUS"
+        echo "Frontend: ${{ steps.current-info.outputs.frontend-current }} -> $FRONTEND_PREVIOUS"
+        echo "Face Recognition: ${{ steps.current-info.outputs.face-recognition-current }} -> $FACE_RECOGNITION_PREVIOUS"
+        
+        # Rollback services
+        aws ecs update-service \
+          --cluster $CLUSTER_NAME \
+          --service acadion-backend-${ENVIRONMENT} \
+          --task-definition acadion-backend-${ENVIRONMENT}:${BACKEND_PREVIOUS} \
+          --force-new-deployment
+        
+        aws ecs update-service \
+          --cluster $CLUSTER_NAME \
+          --service acadion-frontend-${ENVIRONMENT} \
+          --task-definition acadion-frontend-${ENVIRONMENT}:${FRONTEND_PREVIOUS} \
+          --force-new-deployment
+        
+        aws ecs update-service \
+          --cluster $CLUSTER_NAME \
+          --service acadion-face-recognition-${ENVIRONMENT} \
+          --task-definition acadion-face-recognition-${ENVIRONMENT}:${FACE_RECOGNITION_PREVIOUS} \
+          --force-new-deployment
+
+    - name: Wait for rollback completion
+      run: |
+        ENVIRONMENT="${{ github.event.inputs.environment }}"
+        CLUSTER_NAME="acadion-${ENVIRONMENT}-cluster"
+        
+        echo "⏳ Waiting for rollback to complete..."
+        
+        aws ecs wait services-stable \
+          --cluster $CLUSTER_NAME \
+          --services acadion-backend-${ENVIRONMENT} acadion-frontend-${ENVIRONMENT} acadion-face-recognition-${ENVIRONMENT}
+        
+        echo "✅ Rollback deployment completed"
+
+    - name: Verify rollback health
+      run: |
+        ENVIRONMENT="${{ github.event.inputs.environment }}"
+        
+        # Wait for ALB to update
+        sleep 60
+        
+        # Get ALB DNS name
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --names acadion-${ENVIRONMENT}-alb \
+          --query 'LoadBalancers[0].DNSName' \
+          --output text)
+        
+        # Health checks after rollback
+        for i in {1..5}; do
+          if curl -f --max-time 10 "https://$ALB_DNS/api/health"; then
+            echo "✅ Post-rollback health check $i passed"
+          else
+            echo "❌ Post-rollback health check $i failed"
+            exit 1
+          fi
+          sleep 10
+        done
+        
+        # Test frontend
+        curl -f --max-time 10 "https://$ALB_DNS/" || exit 1
+        
+        echo "✅ Rollback verification completed successfully"
+
+    - name: Create rollback incident report
+      run: |
+        cat > rollback-report.md << 'EOF'
+        # Rollback Incident Report
+        
+        **Environment:** ${{ github.event.inputs.environment }}
+        **Timestamp:** $(date -u)
+        **Triggered by:** ${{ github.actor }}
+        **Reason:** ${{ github.event.inputs.reason }}
+        
+        ## Rollback Details
+        - Backend: Revision ${{ steps.current-info.outputs.backend-current }} -> $((${{ steps.current-info.outputs.backend-current }} - 1))
+        - Frontend: Revision ${{ steps.current-info.outputs.frontend-current }} -> $((${{ steps.current-info.outputs.frontend-current }} - 1))
+        - Face Recognition: Revision ${{ steps.current-info.outputs.face-recognition-current }} -> $((${{ steps.current-info.outputs.face-recognition-current }} - 1))
+        
+        ## Status
+        ✅ Rollback completed successfully
+        ✅ Health checks passed
+        
+        ## Next Steps
+        - Investigate root cause of the issue that triggered rollback
+        - Fix the issue before attempting next deployment
+        - Consider additional monitoring or alerting improvements
+        EOF
+        
+        echo "📋 Rollback incident report created"
+        cat rollback-report.md
+
+  notify-rollback:
+    runs-on: ubuntu-latest
+    needs: execute-rollback
+    if: always()
+    
+    steps:
+    - name: Notify rollback status
+      run: |
+        if [[ "${{ needs.execute-rollback.result }}" == "success" ]]; then
+          echo "✅ Rollback completed successfully for ${{ github.event.inputs.environment }}"
+          echo "Reason: ${{ github.event.inputs.reason }}"
+        else
+          echo "❌ Rollback failed for ${{ github.event.inputs.environment }}"
+          echo "Manual intervention required!"
+        fi

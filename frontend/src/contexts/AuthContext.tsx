@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       isFetchingProfile.current = true;
-      console.log('🔍 Fetching user profile for:', session.user.email, 'ID:', session.user.id);
+      // Fetching user profile
 
       try {
         // Try to fetch user profile with a timeout
@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           session.user.user_metadata?.user_type ||
           'student';
 
-        console.log('🔍 Creating profile with user type:', userType);
+        // Creating user profile
 
         const { data: newUser, error: insertError } = await supabase
           .from('users')

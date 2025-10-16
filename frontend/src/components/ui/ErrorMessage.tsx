@@ -239,4 +239,105 @@ export const ValidationErrorMessage: React.FC<{
   />
 );
 
+// Session-specific error messages
+export const SessionLoadErrorMessage: React.FC<{
+  onRetry?: () => void;
+  onGoBack?: () => void;
+  className?: string;
+}> = ({ onRetry, onGoBack, className }) => (
+  <ErrorMessage
+    type="error"
+    title="Failed to Load Sessions"
+    message="We couldn't load the sessions for this class. This might be due to a connection issue or you may not have access to this class."
+    onRetry={onRetry}
+    retryText="Reload Page"
+    className={className}
+  />
+);
+
+export const SessionNotFoundMessage: React.FC<{
+  onGoBack?: () => void;
+  className?: string;
+}> = ({ onGoBack, className }) => (
+  <ErrorMessage
+    type="warning"
+    title="Session Not Found"
+    message="The session you're looking for doesn't exist or has been removed."
+    onRetry={onGoBack}
+    retryText="Go Back to Class"
+    className={className}
+  />
+);
+
+export const SessionPermissionErrorMessage: React.FC<{
+  onGoBack?: () => void;
+  className?: string;
+}> = ({ onGoBack, className }) => (
+  <ErrorMessage
+    type="warning"
+    title="Access Denied"
+    message="You don't have permission to access this session. Please check that you're enrolled in this class or contact your teacher."
+    onRetry={onGoBack}
+    retryText="Go Back to Dashboard"
+    className={className}
+  />
+);
+
+export const SessionCreateErrorMessage: React.FC<{
+  onRetry?: () => void;
+  onDismiss?: () => void;
+  errorType?: 'network' | 'permission' | 'validation' | 'server' | 'unknown';
+  className?: string;
+}> = ({ onRetry, onDismiss, errorType = 'unknown', className }) => {
+  const getErrorConfig = () => {
+    switch (errorType) {
+      case 'network':
+        return {
+          title: 'Connection Error',
+          message: 'Unable to create session due to a network issue. Please check your internet connection and try again.',
+          retryText: 'Retry Creation'
+        };
+      case 'permission':
+        return {
+          title: 'Permission Denied',
+          message: 'You don\'t have permission to create sessions in this class. Please contact your administrator.',
+          retryText: 'Go to Dashboard'
+        };
+      case 'validation':
+        return {
+          title: 'Invalid Session Data',
+          message: 'The session information provided is invalid. Please check your inputs and try again.',
+          retryText: 'Fix and Retry'
+        };
+      case 'server':
+        return {
+          title: 'Server Error',
+          message: 'The server is temporarily unavailable. Please try again in a moment.',
+          retryText: 'Try Again'
+        };
+      default:
+        return {
+          title: 'Failed to Create Session',
+          message: 'We couldn\'t create the session. Please check your connection and try again.',
+          retryText: 'Try Again'
+        };
+    }
+  };
+
+  const config = getErrorConfig();
+
+  return (
+    <ErrorMessage
+      type="error"
+      title={config.title}
+      message={config.message}
+      onRetry={onRetry}
+      onDismiss={onDismiss}
+      retryText={config.retryText}
+      dismissible={true}
+      className={className}
+    />
+  );
+};
+
 export default ErrorMessage;
