@@ -41,18 +41,11 @@ async def debug_create_subject(subject: SubjectCreate):
     logger.info(f"📝 Received data: {subject}")
     return {"message": "Debug endpoint reached", "data": subject.dict(), "status": "success"}
 
-@router.post("")
-async def create_subject(subject: SubjectCreate):
-    """Temporarily bypass authentication to test connectivity"""
-    logger.info("🚨 TEMP: Create subject called without auth for testing")
-    logger.info(f"📝 Received data: {subject}")
-    
-    # Return a simple response for now
-    return {
-        "message": "Subject creation temporarily disabled for debugging",
-        "received_data": subject.dict(),
-        "status": "debug_mode"
-    }
+@router.post("", response_model=SubjectResponse)
+async def create_subject(
+    subject: SubjectCreate,
+    current_user: UserResponse = Depends(get_current_user)
+):
     """Create a new subject/classroom (Teachers only)"""
     try:
         logger.info(f"🎯 Creating subject for user: {current_user.email} (type: {current_user.user_type})")
