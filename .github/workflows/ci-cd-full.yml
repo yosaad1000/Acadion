@@ -49,7 +49,13 @@ jobs:
         echo "🏗️ Testing Docker build..."
         cd ..
         docker build -f Dockerfile.backend -t acadion-backend .
-        docker run --rm acadion-backend python -c "import main; print('✅ Backend builds successfully')"
+        echo "🧪 Testing container can start properly..."
+        docker run --rm acadion-backend python -c "
+import sys
+sys.path.insert(0, '/app')
+import main
+print('✅ Backend builds and imports successfully')
+"
     
     # Frontend testing
     - name: Set up Node.js (Frontend)
