@@ -59,7 +59,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: str = Field(default=".jpg,.jpeg,.png,.pdf,.csv", description="Allowed file extensions")
     
     # CORS Configuration
-    ALLOWED_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:8081", description="Allowed CORS origins")
+    ALLOWED_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:8081,https://acadion-gamma.vercel.app,https://acadion-yosaad1000s-projects.vercel.app,https://*.vercel.app", description="Allowed CORS origins")
     
     # Database Connection Configuration
     DATABASE_POOL_SIZE: int = Field(default=20, description="Database connection pool size")
