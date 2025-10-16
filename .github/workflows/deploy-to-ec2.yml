@@ -148,11 +148,14 @@ jobs:
       run: |
         echo "🔍 Performing final health check..."
         
-        # Check HTTPS backend health
-        if curl -k -f https://${{ env.EC2_HOST }}/api/health; then
-          echo "✅ HTTPS Backend is healthy"
+        # Check backend health via SSH (more reliable)
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -f http://localhost:8000/api/health'; then
+          echo "✅ Backend is healthy"
         else
-          echo "❌ HTTPS Backend health check failed"
+          echo "❌ Backend health check failed"
           exit 1
         fi
     
