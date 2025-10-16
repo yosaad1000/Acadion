@@ -87,7 +87,18 @@ app.add_middleware(
 # Trusted host middleware
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "backend", "frontend", "54.167.95.26", "*.vercel.app", "*.netlify.app"]
+    allowed_hosts=[
+        "localhost", 
+        "127.0.0.1", 
+        "localhost:8000",  # Local development with port
+        "127.0.0.1:8000",  # Local development with port
+        "backend", 
+        "frontend", 
+        "54.167.95.26",     # Production IP
+        "54.167.95.26:8000",  # Production IP with port (this was missing!)
+        "*.vercel.app", 
+        "*.netlify.app"
+    ]
 )
 
 # Include routers
