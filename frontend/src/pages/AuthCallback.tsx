@@ -76,7 +76,7 @@ const AuthCallback: React.FC = () => {
           
           console.log('✅ Session found, user:', session.user.email);
           
-          // Update the user's auth metadata with the user_type for the trigger
+          // Update the user's auth metadata with the user_type
           const { error: updateError } = await supabase.auth.updateUser({
             data: { user_type: userType }
           });
@@ -85,47 +85,20 @@ const AuthCallback: React.FC = () => {
             console.warn('Could not update user metadata:', updateError);
           }
 
-          // Wait a moment for the trigger to process
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Use the new RPC function to ensure user profile is created
+          console.log('🔄 Creating user profile with RPC function...');
+          const { data: profileResult, error: profileError } = await supabase.rpc('ensure_user_profile');
 
-          // Check if user profile exists
-          const { data: existingUser } = await supabase
-            .from('users')
-            .select('*')
-            .eq('auth_user_id', session.user.id)
-            .maybeSingle();
+          if (profileError) {
+            console.error('❌ Profile creation error:', profileError);
+            throw new Error(`Failed to create user profile: ${profileError.message}`);
+          }
 
-          if (!existingUser) {
-            console.log('No user profile found, trigger should have created it. Creating manually...');
-            // Manual fallback - create user profile directly
-            const { error: insertError } = await supabase
-              .from('users')
-              .insert({
-                auth_user_id: session.user.id,
-                email: session.user.email,
-                name: session.user.user_metadata?.name || session.user.email,
-                active_role: userType,
-                auth_provider: 'google',
-                is_face_registered: false
-              });
+          console.log('✅ Profile creation result:', profileResult);
 
-            if (insertError) {
-              console.error('Manual user creation failed:', insertError);
-            } else {
-              console.log('User profile created manually');
-              
-              // Add the role to user_roles table
-              await supabase
-                .from('user_roles')
-                .insert({
-                  auth_user_id: session.user.id,
-                  role_type: userType,
-                  institution_context: 'default'
-                });
-            }
-          } else {
-            console.log('Existing user found:', existingUser);
-            console.log('Current active_role:', existingUser.active_role, 'Requested role:', userType);
+          // If user requested a different role than default, handle role switching
+          if (userType !== 'student') {
+            console.log('🔄 Adding/switching to requested role:', userType);
             
             // Add the requested role if user doesn't have it
             const { error: roleError } = await supabase.rpc('add_user_role', {
