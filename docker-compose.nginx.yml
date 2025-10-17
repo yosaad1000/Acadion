@@ -3,8 +3,8 @@ version: '3.8'
 services:
   acadion-backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.backend
     container_name: acadion-backend
     environment:
       - SUPABASE_URL=${SUPABASE_URL}
