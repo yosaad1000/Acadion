@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Your existing FastAPI backend
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: acadion-backend
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1}
+      - FACE_THRESHOLD=${FACE_THRESHOLD:-0.6}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - acadion-network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: acadion-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - acadion-network
+
+  # Nginx with SSL termination
+  nginx:
+    image: nginx:alpine
+    container_name: acadion-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-domain.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - acadion-network
+
+  # Certbot for SSL certificates
+  certbot:
+    image: certbot/certbot
+    container_name: acadion-certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email admin@yourdomain.com --agree-tos --no-eff-email -d yourdomain.com
+    networks:
+      - acadion-network
+
+networks:
+  acadion-network:
+    driver: bridge
