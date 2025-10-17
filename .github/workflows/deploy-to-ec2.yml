@@ -6,12 +6,16 @@ on:
     paths: 
       - 'backend/**'
       - 'docker-compose*.yml'
+      - 'nginx.conf'
+      - 'generate-ssl.sh'
       - '.github/workflows/deploy-to-ec2.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'backend/**'
       - 'docker-compose*.yml'
+      - 'nginx.conf'
+      - 'generate-ssl.sh'
   workflow_dispatch:
 
 env:
