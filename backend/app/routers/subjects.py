@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, HTTPException, Depends, status, Request, Request
 from typing import List
 from datetime import datetime
 from app.models.subject import SubjectCreate, SubjectUpdate, SubjectResponse, SubjectJoin, SubjectEnrollmentResponse
@@ -33,6 +33,29 @@ async def test_endpoint():
     """Test endpoint without authentication"""
     logger.info("🧪 Test endpoint called - no auth required")
     return {"message": "Test endpoint working", "status": "success"}
+
+@router.get("/auth-debug")
+async def auth_debug_endpoint(request: Request):
+    """Debug endpoint to check what headers are being sent"""
+    from fastapi import Request
+    logger.info("🔍 Auth debug endpoint called")
+    logger.info(f"📋 All headers: {dict(request.headers)}")
+    
+    auth_header = request.headers.get("authorization")
+    if auth_header:
+        logger.info(f"🔑 Authorization header found: {auth_header[:50]}...")
+        return {
+            "message": "Authorization header received",
+            "has_auth": True,
+            "auth_preview": auth_header[:50] + "..." if len(auth_header) > 50 else auth_header
+        }
+    else:
+        logger.info("❌ No authorization header found")
+        return {
+            "message": "No authorization header",
+            "has_auth": False,
+            "all_headers": dict(request.headers)
+        }
 
 @router.post("/debug")
 async def debug_create_subject(subject: SubjectCreate, request: Request):
