@@ -1,0 +1,64 @@
+name: Setup Domain SSL (acadion.online)
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  EC2_HOST: 54.167.95.26
+
+jobs:
+  setup-ssl:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup SSL for acadion.online
+      run: |
+        echo "🚀 Setting up SSL for acadion.online"
+        
+        # Deploy to EC2
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Copy setup script and execute
+        scp -i key.pem -o StrictHostKeyChecking=no setup-existing-domain.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/setup-existing-domain.sh && /tmp/setup-existing-domain.sh acadion.online'
+    
+    - name: Test SSL Setup
+      run: |
+        echo "🔍 Testing SSL setup..."
+        
+        # Wait for SSL setup to complete
+        sleep 30
+        
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Test SSL certificates
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} << 'TEST_SCRIPT'
+        echo "Testing SSL certificates..."
+        
+        # Check if certificates exist
+        if sudo test -f /etc/letsencrypt/live/acadion.online/fullchain.pem; then
+          echo "✅ SSL certificate for acadion.online exists"
+        else
+          echo "❌ SSL certificate for acadion.online missing"
+        fi
+        
+        if sudo test -f /etc/letsencrypt/live/api.acadion.online/fullchain.pem; then
+          echo "✅ SSL certificate for api.acadion.online exists"
+        else
+          echo "❌ SSL certificate for api.acadion.online missing"
+        fi
+        
+        # Check nginx status
+        if sudo systemctl is-active --quiet nginx; then
+          echo "✅ Nginx is running"
+        else
+          echo "❌ Nginx is not running"
+        fi
+        TEST_SCRIPT
+        
+        echo "🎉 SSL setup completed!"

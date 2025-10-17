@@ -7,7 +7,10 @@ on:
         description: 'Setup SSL certificates (first time only)'
         required: false
         default: 'false'
-        type: boolean
+        type: choice
+        options:
+          - 'true'
+          - 'false'
   push:
     branches: [ main ]
     paths: 
@@ -32,32 +35,13 @@ jobs:
       run: |
         echo "🚀 Setting up domain: ${{ env.DOMAIN }}"
         
-        # Create deployment script
-        cat > setup-domain.sh << 'EOF'
-        #!/bin/bash
-        set -e
-        
-        echo "🌐 Setting up domain: acadion.online"
-        echo "📋 This will configure:"
-        echo "   Frontend: https://acadion.online"
-        echo "   Backend:  https://api.acadion.online"
-        echo ""
-        
-        # Run the domain setup script
-        chmod +x setup-existing-domain.sh
-        ./setup-existing-domain.sh acadion.online
-        
-        echo "✅ Domain setup completed!"
-        EOF
-        
         # Deploy to EC2
         echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
         chmod 600 key.pem
         
         # Copy setup script and execute
         scp -i key.pem -o StrictHostKeyChecking=no setup-existing-domain.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
-        scp -i key.pem -o StrictHostKeyChecking=no setup-domain.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
-        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/setup-domain.sh && /tmp/setup-domain.sh'
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/setup-existing-domain.sh && /tmp/setup-existing-domain.sh acadion.online'
 
   deploy-backend:
     runs-on: ubuntu-latest
@@ -75,12 +59,17 @@ jobs:
         tar -czf acadion-deploy.tar.gz \
           backend/ \
           docker-compose.backend-only.yml \
-          Dockerfile.backend \
-          || true
+          Dockerfile.backend
         
-        # Create deployment script
-        cat > deploy-backend-domain.sh << 'EOF'
-        #!/bin/bash
+        # Deploy to EC2
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Copy deployment files
+        scp -i key.pem -o StrictHostKeyChecking=no acadion-deploy.tar.gz ec2-user@${{ env.EC2_HOST }}:/tmp/
+        
+        # Execute deployment
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} << 'DEPLOY_SCRIPT'
         set -e
         
         echo "🚀 Starting backend deployment for domain..."
@@ -95,24 +84,15 @@ jobs:
         
         # Create/update environment file
         cat > backend/.env << 'ENVEOF'
-        # Supabase Configuration
         SUPABASE_URL=${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
         SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
-        
-        # JWT Configuration
         SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
-        
-        # Pinecone Configuration
         PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
         PINECONE_ENVIRONMENT=${{ secrets.PINECONE_ENVIRONMENT }}
         PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}
-        
-        # Application Configuration
         FACE_THRESHOLD=0.6
         REDIS_URL=redis://redis:6379
-        
-        # AWS Configuration
         AWS_DEFAULT_REGION=us-east-1
         AWS_REGION=us-east-1
         ENVEOF
@@ -127,8 +107,8 @@ jobs:
         echo "⏳ Waiting for backend to start..."
         sleep 15
         
-        # Health check via nginx proxy
-        if curl -f https://api.acadion.online/api/health; then
+        # Health check
+        if curl -f http://localhost:8000/api/health; then
           echo "✅ Backend deployment successful!"
         else
           echo "❌ Backend health check failed"
@@ -136,16 +116,7 @@ jobs:
         fi
         
         echo "🎉 Backend deployment completed!"
-        EOF
-        
-        # Deploy to EC2
-        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
-        chmod 600 key.pem
-        
-        # Copy deployment files and execute
-        scp -i key.pem -o StrictHostKeyChecking=no acadion-deploy.tar.gz ec2-user@${{ env.EC2_HOST }}:/tmp/
-        scp -i key.pem -o StrictHostKeyChecking=no deploy-backend-domain.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
-        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/deploy-backend-domain.sh && /tmp/deploy-backend-domain.sh'
+        DEPLOY_SCRIPT
 
   update-frontend:
     runs-on: ubuntu-latest
