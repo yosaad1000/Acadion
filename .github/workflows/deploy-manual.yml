@@ -1,0 +1,59 @@
+name: Manual Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'What to deploy'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - 'backend'
+          - 'frontend'
+          - 'both'
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - 'production'
+          - 'staging'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy Backend
+      if: inputs.component == 'backend' || inputs.component == 'both'
+      run: |
+        echo "🚀 Manually deploying backend..."
+        
+        # Trigger backend workflow
+        gh workflow run deploy-backend.yml
+        echo "✅ Backend deployment triggered"
+      env:
+        GH_TOKEN: ${{ github.token }}
+    
+    - name: Deploy Frontend
+      if: inputs.component == 'frontend' || inputs.component == 'both'
+      run: |
+        echo "🚀 Manually deploying frontend..."
+        
+        # Trigger frontend workflow
+        gh workflow run deploy-frontend.yml
+        echo "✅ Frontend deployment triggered"
+      env:
+        GH_TOKEN: ${{ github.token }}
+    
+    - name: Summary
+      run: |
+        echo "🎉 Manual deployment initiated!"
+        echo "Component: ${{ inputs.component }}"
+        echo "Environment: ${{ inputs.environment }}"
+        echo ""
+        echo "Check the Actions tab for deployment progress."
