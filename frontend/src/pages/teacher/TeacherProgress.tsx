@@ -3,8 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   ChartBarIcon,
   UserGroupIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
@@ -126,8 +126,8 @@ const TeacherProgress: React.FC = () => {
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
-      case 'up': return <TrendingUpIcon className="h-4 w-4 text-green-500" />;
-      case 'down': return <TrendingDownIcon className="h-4 w-4 text-red-500" />;
+      case 'up': return <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />;
+      case 'down': return <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />;
       default: return <div className="h-4 w-4 bg-gray-400 rounded-full"></div>;
     }
   };

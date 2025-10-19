@@ -10,7 +10,7 @@ import {
   ArrowTrendingDownIcon,
   CalendarIcon,
   LightBulbIcon,
-  TargetIcon
+  PresentationChartLineIcon
 } from '@heroicons/react/24/outline';
 
 interface AnalyticsData {
@@ -332,7 +332,7 @@ const LearningAnalytics: React.FC = () => {
             {/* Goals */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                <TargetIcon className="h-5 w-5 mr-2" />
+                <PresentationChartLineIcon className="h-5 w-5 mr-2" />
                 Goals
               </h2>
               

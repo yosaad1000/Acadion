@@ -56,7 +56,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       isFetchingProfile.current = true;
-      // Fetching user profile
 
       try {
         // Try to fetch user profile with a timeout
@@ -70,7 +69,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
         );
 
-        const { data: userData, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+        let userData, error;
+        try {
+          const result = await Promise.race([profilePromise, timeoutPromise]) as any;
+          userData = result.data;
+          error = result.error;
+        } catch (timeoutError) {
+          console.warn('⚠️ Profile fetch timeout, using fallback');
+          error = null;
+          userData = null;
+        }
 
         console.log('📊 Profile query result:', { userData, error });
 

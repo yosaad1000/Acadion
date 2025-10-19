@@ -5,7 +5,7 @@ import {
   TrophyIcon,
   ClockIcon,
   BookOpenIcon,
-  TrendingUpIcon,
+  ArrowTrendingUpIcon,
   CalendarIcon
 } from '@heroicons/react/24/outline';
 
@@ -209,7 +209,7 @@ const StudentAnalytics: React.FC = () => {
           {/* AI Recommendations */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-              <TrendingUpIcon className="h-5 w-5 mr-2 text-blue-500" />
+              <ArrowTrendingUpIcon className="h-5 w-5 mr-2 text-blue-500" />
               AI Recommendations
             </h3>
             <div className="space-y-3">

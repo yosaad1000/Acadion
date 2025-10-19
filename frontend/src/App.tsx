@@ -6,6 +6,8 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ViewProvider } from './contexts/ViewContext';
 import Layout from './components/Layout/Layout';
+import AppErrorBoundary from './components/AppErrorBoundary';
+import OfflineDetector from './components/OfflineDetector';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -24,7 +26,14 @@ import FaceRegistration from './pages/FaceRegistration';
 import Notifications from './pages/Notifications';
 import SessionDetail from './pages/SessionDetail';
 
-// New LMS Pages - keeping them in the main pages directory for simplicity
+// Additional pages
+import Dashboard from './pages/Dashboard';
+import AttendanceReports from './pages/AttendanceReports';
+import AttendanceUpload from './pages/AttendanceUpload';
+import StudentRegister from './pages/StudentRegister';
+import Students from './pages/Students';
+
+// LMS Feature Pages
 import DocumentManager from './pages/DocumentManager';
 import StudyChat from './pages/StudyChat';
 import QuizCenter from './pages/QuizCenter';
@@ -32,11 +41,26 @@ import InterviewPractice from './pages/InterviewPractice';
 import LearningAnalytics from './pages/LearningAnalytics';
 import StudySchedule from './pages/StudySchedule';
 import ContentLibrary from './pages/ContentLibrary';
-import AssessmentBuilder from './pages/AssessmentBuilder';
-import ProgressMonitor from './pages/ProgressMonitor';
-import AIConfiguration from './pages/AIConfiguration';
-import Settings from './pages/Settings';
-import Help from './pages/Help';
+
+// Role-specific pages from subdirectories
+import StudentAnalytics from './pages/student/StudentAnalytics';
+import StudentChat from './pages/student/StudentChat';
+import StudentDocuments from './pages/student/StudentDocuments';
+import StudentInterview from './pages/student/StudentInterview';
+import StudentQuizzes from './pages/student/StudentQuizzes';
+import StudentSchedule from './pages/student/StudentSchedule';
+
+import TeacherAIConfig from './pages/teacher/TeacherAIConfig';
+import TeacherAnalytics from './pages/teacher/TeacherAnalytics';
+import TeacherAssessments from './pages/teacher/TeacherAssessments';
+import TeacherClasses from './pages/teacher/TeacherClasses';
+import TeacherContent from './pages/teacher/TeacherContent';
+import TeacherInterviews from './pages/teacher/TeacherInterviews';
+import TeacherProgress from './pages/teacher/TeacherProgress';
+
+// Shared pages
+import Settings from './pages/shared/Settings';
+import Help from './pages/shared/Help';
 
 import './App.css';
 
@@ -131,19 +155,44 @@ const AppRoutes: React.FC = () => {
         }
       >
         <Route path="dashboard" element={<DashboardRoute />} />
-        
-        {/* Legacy Routes - Keep for backward compatibility */}
+
+        {/* Class & Subject Management */}
         <Route path="create-class" element={<CreateClass />} />
         <Route path="join-class" element={<JoinClass />} />
         <Route path="class/:classId" element={<ClassRoom />} />
         <Route path="class/:classId/session/:sessionId" element={<SessionDetail />} />
+
+        {/* Attendance Routes */}
         <Route path="take-attendance/:classId" element={<TakeAttendance />} />
         <Route path="attendance-dashboard/:classId" element={<AttendanceDashboard />} />
+        <Route path="attendance-reports" element={<AttendanceReports />} />
+        <Route path="attendance-upload" element={<AttendanceUpload />} />
         <Route path="student-attendance/:classId" element={<StudentAttendance />} />
+
+        {/* Student Management */}
         <Route path="students" element={<ViewStudents />} />
+        <Route path="student-register" element={<StudentRegister />} />
+        <Route path="all-students" element={<Students />} />
         <Route path="register-face" element={<FaceRegistration />} />
-        
-        {/* New LMS Routes */}
+
+        {/* Student-specific Features */}
+        <Route path="student/analytics" element={<StudentAnalytics />} />
+        <Route path="student/chat" element={<StudentChat />} />
+        <Route path="student/documents" element={<StudentDocuments />} />
+        <Route path="student/interview" element={<StudentInterview />} />
+        <Route path="student/quizzes" element={<StudentQuizzes />} />
+        <Route path="student/schedule" element={<StudentSchedule />} />
+
+        {/* Teacher-specific Features */}
+        <Route path="teacher/ai-config" element={<TeacherAIConfig />} />
+        <Route path="teacher/analytics" element={<TeacherAnalytics />} />
+        <Route path="teacher/assessments" element={<TeacherAssessments />} />
+        <Route path="teacher/classes" element={<TeacherClasses />} />
+        <Route path="teacher/content" element={<TeacherContent />} />
+        <Route path="teacher/interviews" element={<TeacherInterviews />} />
+        <Route path="teacher/progress" element={<TeacherProgress />} />
+
+        {/* Shared LMS Features */}
         <Route path="documents" element={<DocumentManager />} />
         <Route path="chat" element={<StudyChat />} />
         <Route path="quizzes" element={<QuizCenter />} />
@@ -151,11 +200,8 @@ const AppRoutes: React.FC = () => {
         <Route path="analytics" element={<LearningAnalytics />} />
         <Route path="schedule" element={<StudySchedule />} />
         <Route path="content" element={<ContentLibrary />} />
-        <Route path="assessments" element={<AssessmentBuilder />} />
-        <Route path="progress" element={<ProgressMonitor />} />
-        <Route path="ai-config" element={<AIConfiguration />} />
-        
-        {/* Existing Routes */}
+
+        {/* User Settings & Support */}
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
         <Route path="help" element={<Help />} />
@@ -169,19 +215,22 @@ const AppRoutes: React.FC = () => {
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <ToastProvider>
-            <ViewProvider>
-              <Router>
-                <AppRoutes />
-              </Router>
-            </ViewProvider>
-          </ToastProvider>
-        </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <ToastProvider>
+              <ViewProvider>
+                <Router>
+                  <OfflineDetector />
+                  <AppRoutes />
+                </Router>
+              </ViewProvider>
+            </ToastProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </AppErrorBoundary>
   );
 }
 

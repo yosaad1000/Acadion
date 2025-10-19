@@ -25,84 +25,125 @@ const hasRetryAttempt = (headers?: HeadersInit): boolean => {
   return 'X-Retry-Attempt' in headers;
 };
 
-// Helper function for making API calls
+// Helper function for making API calls with failsafe error handling
 export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
-  // Add default headers (but don't set Content-Type for FormData)
-  const defaultHeaders: Record<string, string> = {};
-  
-  // Only set Content-Type if body is not FormData
-  if (options.body && !(options.body instanceof FormData)) {
-    defaultHeaders['Content-Type'] = 'application/json';
-  }
-  
-  // Merge with provided headers
-  Object.assign(defaultHeaders, options.headers);
 
-  // Get Supabase session token
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    defaultHeaders['Authorization'] = `Bearer ${session.access_token}`;
-    console.log('🔑 Making API call with token:', session.access_token.substring(0, 20) + '...');
-  } else {
-    console.warn('⚠️ No session token found for API call');
-  }
+  try {
+    // Add default headers (but don't set Content-Type for FormData)
+    const defaultHeaders: Record<string, string> = {};
 
-  console.log('🌐 API Call:', options.method || 'GET', url);
-  
-  const response = await fetch(url, {
-    ...options,
-    headers: defaultHeaders,
-  });
+    // Only set Content-Type if body is not FormData
+    if (options.body && !(options.body instanceof FormData)) {
+      defaultHeaders['Content-Type'] = 'application/json';
+    }
 
-  console.log('📡 API Response:', response.status, response.statusText);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('❌ API Error Response:', errorText);
-    
-    // If we get 401, try to refresh the session and retry once
-    if (response.status === 401 && !hasRetryAttempt(options.headers)) {
-      console.log('🔄 Got 401, attempting to refresh session and retry...');
-      
-      try {
-        const { data: { session: newSession } } = await supabase.auth.refreshSession();
-        if (newSession?.access_token) {
-          console.log('✅ Session refreshed, retrying API call...');
-          
-          // Retry the request with new token
-          const retryHeaders = {
-            ...defaultHeaders,
-            'Authorization': `Bearer ${newSession.access_token}`,
-            'X-Retry-Attempt': '1' // Prevent infinite retry
-          };
-          
-          const retryResponse = await fetch(url, {
-            ...options,
-            headers: retryHeaders,
-          });
-          
-          console.log('🔄 Retry response:', retryResponse.status, retryResponse.statusText);
-          return retryResponse;
+    // Merge with provided headers
+    Object.assign(defaultHeaders, options.headers);
+
+    // Get Supabase session token
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        defaultHeaders['Authorization'] = `Bearer ${session.access_token}`;
+        console.log('🔑 Making API call with token:', session.access_token.substring(0, 20) + '...');
+      } else {
+        console.warn('⚠️ No session token found for API call');
+      }
+    } catch (authError) {
+      console.warn('⚠️ Failed to get session, continuing without auth:', authError);
+    }
+
+    console.log('🌐 API Call:', options.method || 'GET', url);
+
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+    const response = await fetch(url, {
+      ...options,
+      headers: defaultHeaders,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    console.log('📡 API Response:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error Response:', errorText);
+
+      // If we get 401, try to refresh the session and retry once
+      if (response.status === 401 && !hasRetryAttempt(options.headers)) {
+        console.log('🔄 Got 401, attempting to refresh session and retry...');
+
+        try {
+          const { data: { session: newSession } } = await supabase.auth.refreshSession();
+          if (newSession?.access_token) {
+            console.log('✅ Session refreshed, retrying API call...');
+
+            // Retry the request with new token
+            const retryHeaders = {
+              ...defaultHeaders,
+              'Authorization': `Bearer ${newSession.access_token}`,
+              'X-Retry-Attempt': '1'
+            };
+
+            const retryResponse = await fetch(url, {
+              ...options,
+              headers: retryHeaders,
+            });
+
+            console.log('🔄 Retry response:', retryResponse.status, retryResponse.statusText);
+            return retryResponse;
+          }
+        } catch (refreshError) {
+          console.error('❌ Failed to refresh session:', refreshError);
         }
-      } catch (refreshError) {
-        console.error('❌ Failed to refresh session:', refreshError);
       }
     }
-  }
 
-  return response;
+    return response;
+  } catch (error: any) {
+    console.error('❌ API Call failed:', error);
+
+    // Return a mock failed response for network errors
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - backend may be unavailable');
+    }
+
+    if (!navigator.onLine) {
+      throw new Error('No internet connection');
+    }
+
+    throw new Error(`Backend unavailable: ${error.message}`);
+  }
 };
 
-// Helper function to get JSON response
+// Helper function to get JSON response with failsafe
 export const apiCallJson = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await apiCall(endpoint, options);
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `HTTP ${response.status}`);
+  try {
+    const response = await apiCall(endpoint, options);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `HTTP ${response.status}`);
+    }
+    return response.json();
+  } catch (error: any) {
+    console.error('❌ API JSON call failed:', error.message);
+
+    // Return empty data structure based on common patterns
+    if (endpoint.includes('/notifications')) {
+      return [];
+    }
+    if (endpoint.includes('/subjects') || endpoint.includes('/sessions')) {
+      return [];
+    }
+
+    // Re-throw for proper error handling
+    throw error;
   }
-  return response.json();
 };
 
 // Convenience functions

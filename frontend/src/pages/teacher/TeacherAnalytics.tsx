@@ -4,8 +4,8 @@ import {
   ChartBarIcon,
   UserGroupIcon,
   ClockIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   DocumentTextIcon,
   AcademicCapIcon,
   CalendarIcon
@@ -108,8 +108,9 @@ const TeacherAnalytics: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };  i
-f (loading) {
+  };
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -193,7 +194,7 @@ f (loading) {
           
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center">
-              <TrendingUpIcon className="h-8 w-8 text-orange-500 dark:text-orange-400" />
+              <ArrowTrendingUpIcon className="h-8 w-8 text-orange-500 dark:text-orange-400" />
               <div className="ml-4">
                 <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {analyticsData.overview.avgEngagement}%
