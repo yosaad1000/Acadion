@@ -42,14 +42,14 @@ jobs:
     - name: Setup Domain SSL
       if: steps.check-ssl.outputs.ssl_exists == 'false' || github.event.inputs.force_setup == 'true'
       run: |
-        echo "🚀 Setting up domain SSL for ${{ env.DOMAIN }}..."
+        echo "🚀 Setting up domain SSL for api.${{ env.DOMAIN }}..."
         
         echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
         chmod 600 key.pem
         
-        # Copy setup script and execute
-        scp -i key.pem -o StrictHostKeyChecking=no setup-existing-domain.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
-        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/setup-existing-domain.sh && /tmp/setup-existing-domain.sh acadion.online'
+        # Copy simple setup script and execute
+        scp -i key.pem -o StrictHostKeyChecking=no setup-domain-simple.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/setup-domain-simple.sh && /tmp/setup-domain-simple.sh'
     
     - name: Verify SSL Setup
       run: |
