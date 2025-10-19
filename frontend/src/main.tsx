@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 
 // Updated to use HTTPS API domain: https://api.acadion.online
+// Triggering deployment with proper Vercel token from secrets
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
