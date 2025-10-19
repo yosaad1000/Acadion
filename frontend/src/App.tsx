@@ -23,6 +23,21 @@ import Profile from './pages/Profile';
 import FaceRegistration from './pages/FaceRegistration';
 import Notifications from './pages/Notifications';
 import SessionDetail from './pages/SessionDetail';
+
+// New LMS Pages - keeping them in the main pages directory for simplicity
+import DocumentManager from './pages/DocumentManager';
+import StudyChat from './pages/StudyChat';
+import QuizCenter from './pages/QuizCenter';
+import InterviewPractice from './pages/InterviewPractice';
+import LearningAnalytics from './pages/LearningAnalytics';
+import StudySchedule from './pages/StudySchedule';
+import ContentLibrary from './pages/ContentLibrary';
+import AssessmentBuilder from './pages/AssessmentBuilder';
+import ProgressMonitor from './pages/ProgressMonitor';
+import AIConfiguration from './pages/AIConfiguration';
+import Settings from './pages/Settings';
+import Help from './pages/Help';
+
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -116,6 +131,8 @@ const AppRoutes: React.FC = () => {
         }
       >
         <Route path="dashboard" element={<DashboardRoute />} />
+        
+        {/* Legacy Routes - Keep for backward compatibility */}
         <Route path="create-class" element={<CreateClass />} />
         <Route path="join-class" element={<JoinClass />} />
         <Route path="class/:classId" element={<ClassRoom />} />
@@ -124,9 +141,26 @@ const AppRoutes: React.FC = () => {
         <Route path="attendance-dashboard/:classId" element={<AttendanceDashboard />} />
         <Route path="student-attendance/:classId" element={<StudentAttendance />} />
         <Route path="students" element={<ViewStudents />} />
-        <Route path="profile" element={<Profile />} />
         <Route path="register-face" element={<FaceRegistration />} />
+        
+        {/* New LMS Routes */}
+        <Route path="documents" element={<DocumentManager />} />
+        <Route path="chat" element={<StudyChat />} />
+        <Route path="quizzes" element={<QuizCenter />} />
+        <Route path="interview" element={<InterviewPractice />} />
+        <Route path="analytics" element={<LearningAnalytics />} />
+        <Route path="schedule" element={<StudySchedule />} />
+        <Route path="content" element={<ContentLibrary />} />
+        <Route path="assessments" element={<AssessmentBuilder />} />
+        <Route path="progress" element={<ProgressMonitor />} />
+        <Route path="ai-config" element={<AIConfiguration />} />
+        
+        {/* Existing Routes */}
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="help" element={<Help />} />
         <Route path="notifications" element={<Notifications />} />
+        
         <Route path="" element={<Navigate to="/dashboard" />} />
       </Route>
     </Routes>

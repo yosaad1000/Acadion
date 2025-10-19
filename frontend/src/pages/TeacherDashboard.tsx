@@ -12,7 +12,11 @@ import {
   UserGroupIcon,
   CalendarIcon,
   ClipboardDocumentListIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  MicrophoneIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 
 interface TeachingSubject {
@@ -163,41 +167,72 @@ const TeacherDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        {/* LMS Features */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-6 sm:mb-8 transition-colors">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">Quick Actions</h3>
-          <div className="grid-responsive-3 gap-3 sm:gap-4">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">Teaching Tools</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Link
+              to="/teacher/classes"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <UserGroupIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 dark:text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Classes</div>
+            </Link>
+            
+            <Link
+              to="/teacher/content"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <DocumentTextIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 dark:text-green-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Content</div>
+            </Link>
+            
+            <Link
+              to="/teacher/assessments"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <ClipboardDocumentListIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 dark:text-purple-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Assessments</div>
+            </Link>
+            
+            <Link
+              to="/teacher/progress"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <ChartBarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 dark:text-orange-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Progress</div>
+            </Link>
+            
+            <Link
+              to="/teacher/interviews"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <MicrophoneIcon className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 dark:text-red-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Interviews</div>
+            </Link>
+            
+            <Link
+              to="/teacher/analytics"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <ChartBarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-teal-500 dark:text-teal-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Analytics</div>
+            </Link>
+            
+            <Link
+              to="/teacher/ai-config"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <CogIcon className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-500 dark:text-indigo-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">AI Config</div>
+            </Link>
+            
             <Link
               to="/create-class"
-              className="flex items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
             >
-              <PlusIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 dark:text-blue-400 mr-3 flex-shrink-0 group-hover:scale-110 transition-transform" />
-              <div className="min-w-0">
-                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">Create New Class</div>
-                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Start a new classroom</div>
-              </div>
-            </Link>
-            
-            <Link
-              to="/students"
-              className="flex items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
-            >
-              <ClipboardDocumentListIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 dark:text-green-400 mr-3 flex-shrink-0 group-hover:scale-110 transition-transform" />
-              <div className="min-w-0">
-                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">View Attendance Reports</div>
-                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Check attendance history</div>
-              </div>
-            </Link>
-            
-            <Link
-              to="/students"
-              className="flex items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
-            >
-              <UserGroupIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 dark:text-purple-400 mr-3 flex-shrink-0 group-hover:scale-110 transition-transform" />
-              <div className="min-w-0">
-                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">View All Students</div>
-                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Manage student roster</div>
-              </div>
+              <PlusIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500 dark:text-gray-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">New Class</div>
             </Link>
           </div>
         </div>
