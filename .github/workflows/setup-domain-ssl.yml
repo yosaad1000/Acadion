@@ -1,0 +1,93 @@
+name: Setup Domain SSL (One-time)
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_setup:
+        description: 'Force SSL setup even if certificates exist'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  EC2_HOST: 54.167.95.26
+  DOMAIN: acadion.online
+
+jobs:
+  setup-ssl:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check SSL Status
+      id: check-ssl
+      run: |
+        echo "🔍 Checking SSL certificate status..."
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Check if SSL certificates exist
+        if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'sudo test -f /etc/letsencrypt/live/api.acadion.online/fullchain.pem'; then
+          echo "ssl_exists=true" >> $GITHUB_OUTPUT
+          echo "✅ SSL certificates already exist"
+        else
+          echo "ssl_exists=false" >> $GITHUB_OUTPUT
+          echo "❌ SSL certificates not found"
+        fi
+    
+    - name: Setup Domain SSL
+      if: steps.check-ssl.outputs.ssl_exists == 'false' || github.event.inputs.force_setup == 'true'
+      run: |
+        echo "🚀 Setting up domain SSL for ${{ env.DOMAIN }}..."
+        
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Copy setup script and execute
+        scp -i key.pem -o StrictHostKeyChecking=no setup-existing-domain.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/setup-existing-domain.sh && /tmp/setup-existing-domain.sh acadion.online'
+    
+    - name: Verify SSL Setup
+      run: |
+        echo "🔍 Verifying SSL setup..."
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Wait for SSL setup to complete
+        sleep 30
+        
+        # Test SSL certificates
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} << 'TEST_SCRIPT'
+        echo "Testing SSL certificates..."
+        
+        # Check if certificates exist
+        if sudo test -f /etc/letsencrypt/live/acadion.online/fullchain.pem; then
+          echo "✅ SSL certificate for acadion.online exists"
+        else
+          echo "❌ SSL certificate for acadion.online missing"
+        fi
+        
+        if sudo test -f /etc/letsencrypt/live/api.acadion.online/fullchain.pem; then
+          echo "✅ SSL certificate for api.acadion.online exists"
+        else
+          echo "❌ SSL certificate for api.acadion.online missing"
+        fi
+        
+        # Check nginx status
+        if sudo systemctl is-active --quiet nginx; then
+          echo "✅ Nginx is running"
+        else
+          echo "❌ Nginx is not running"
+          sudo systemctl start nginx || echo "Failed to start nginx"
+        fi
+        TEST_SCRIPT
+        
+        echo ""
+        echo "🎉 SSL setup verification completed!"
+        echo "🌐 Test URLs:"
+        echo "   Frontend: https://acadion.online"
+        echo "   Backend:  https://api.acadion.online/api/health"
