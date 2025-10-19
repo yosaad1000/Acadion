@@ -4,7 +4,7 @@ import type { NotificationPreference } from '../types';
 // API configuration for the frontend
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.PROD 
-    ? 'http://54.167.95.26:8000'  // Production backend (HTTP to avoid SSL issues)
+    ? 'http://54.167.95.26:8000'  // Production backend (HTTP for now to avoid mixed content)
     : 'http://localhost:8000'); // Local development
 
 console.log('🌐 API Base URL:', API_BASE_URL);

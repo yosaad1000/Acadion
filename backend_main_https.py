@@ -18,52 +18,51 @@ app = FastAPI(
     description="Comprehensive Student Management System with Facial Attendance Recognition",
     version="2.0.0",
     docs_url="/docs",
-    # Updated deployment workflow - fixed Vercel permissions
     redoc_url="/redoc"
 )
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize and validate configuration on application startup"""
-    
+
     try:
         from app.config.loader import initialize_application_configuration, schedule_configuration_refresh
         
         # Initialize configuration with Parameter Store integration
         logger.info("🚀 Starting application configuration initialization...")
-        
+
         config_success = await initialize_application_configuration()
-        
+
         if config_success:
             logger.info("✅ Application configuration initialized successfully")
-            
+
             # Schedule periodic configuration refresh (every 60 minutes)
             # This ensures configuration stays up-to-date with Parameter Store changes
             schedule_configuration_refresh(interval_minutes=60)
-            
+
         else:
             logger.error("❌ Configuration initialization failed")
             logger.warning("Application will continue but may not function correctly")
-        
+            
     except Exception as e:
         logger.error(f"❌ Configuration initialization failed on startup: {e}")
         logger.warning("Application will continue but may not function correctly")
         # Don't fail startup, just log the error
-    
+
     # Initialize caching and connection pooling services
     try:
         from app.core.cache_init import initialize_caching_services
-        
+
         logger.info("🚀 Initializing caching and connection pooling services...")
-        
+
         cache_success = await initialize_caching_services()
-        
+
         if cache_success:
             logger.info("✅ Caching and connection pooling services initialized successfully")
         else:
             logger.error("❌ Caching services initialization failed")
             logger.warning("Application will continue with reduced performance")
-        
+
     except Exception as e:
         logger.error(f"❌ Caching services initialization failed on startup: {e}")
         logger.warning("Application will continue with reduced performance")
@@ -89,15 +88,15 @@ app.add_middleware(
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=[
-        "localhost", 
-        "127.0.0.1", 
+        "localhost",
+        "127.0.0.1",
         "localhost:8000",  # Local development with port
         "127.0.0.1:8000",  # Local development with port
-        "backend", 
-        "frontend", 
+        "backend",
+        "frontend",
         "54.167.95.26",     # Production IP
         "54.167.95.26:8000",  # Production IP with port (this was missing!)
-        "*.vercel.app", 
+        "*.vercel.app",
         "*.netlify.app"
     ]
 )
@@ -134,39 +133,39 @@ async def config_info():
 async def config_status():
     """Get detailed configuration status and validation results"""
     from app.config.loader import validate_application_configuration
-    
+
     return await validate_application_configuration()
 
 @app.get("/api/config/health")
 async def config_health():
     """Get configuration health status"""
     from app.config.loader import get_application_configuration_health
-    
+
     return await get_application_configuration_health()
 
 @app.get("/api/config/summary")
 async def config_summary():
     """Get secure configuration summary (no sensitive data)"""
     from app.settings import get_secure_configuration_summary
-    
+
     return get_secure_configuration_summary()
 
 @app.post("/api/config/refresh")
 async def refresh_config():
     """Refresh configuration from Parameter Store with validation"""
     from app.config.loader import refresh_application_configuration
-    
+
     result = await refresh_application_configuration()
-    
+
     if result["success"]:
         return {
-            "status": "success", 
+            "status": "success",
             "message": "Configuration refreshed successfully",
             "details": result
         }
     else:
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Failed to refresh configuration: {result.get('error', 'Unknown error')}"
         )
 
@@ -174,9 +173,9 @@ async def refresh_config():
 async def validate_config():
     """Validate current configuration with connectivity checks"""
     from app.config.loader import validate_application_configuration
-    
+
     result = await validate_application_configuration()
-    
+
     return {
         "status": "success" if result["valid"] else "error",
         "valid": result["valid"],
@@ -189,11 +188,11 @@ async def shutdown_event():
     """Clean shutdown of application services"""
     try:
         from app.core.cache_init import shutdown_caching_services
-        
+
         logger.info("🛑 Shutting down caching and connection services...")
         await shutdown_caching_services()
         logger.info("✅ Application shutdown completed")
-        
+
     except Exception as e:
         logger.error(f"❌ Error during application shutdown: {e}")
 
@@ -229,4 +228,21 @@ async def connection_stats():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    import os
+    
+    # Check if SSL certificates exist
+    ssl_keyfile = "/app/ssl/key.pem"
+    ssl_certfile = "/app/ssl/cert.pem"
+    
+    if os.path.exists(ssl_keyfile) and os.path.exists(ssl_certfile):
+        print("🔒 Starting server with HTTPS...")
+        uvicorn.run(
+            app, 
+            host="0.0.0.0", 
+            port=8000, 
+            ssl_keyfile=ssl_keyfile,
+            ssl_certfile=ssl_certfile
+        )
+    else:
+        print("⚠️  SSL certificates not found, starting with HTTP...")
+        uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,0 +1,124 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [ main ]
+    paths: 
+      - 'backend/**'
+      - 'docker-compose*.yml'
+      - 'Dockerfile.backend'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+env:
+  EC2_HOST: 54.167.95.26
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Test Backend
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        
+        # Basic syntax check
+        python -m py_compile main.py
+        python -c "import main; print('✅ Backend imports successfully')"
+        
+        # Test Docker build
+        cd ..
+        docker build -f Dockerfile.backend -t acadion-backend-test .
+        echo "✅ Docker build successful"
+    
+    - name: Deploy to EC2
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "🚀 Deploying backend to EC2..."
+        
+        # Create deployment package
+        tar -czf backend-deploy.tar.gz backend/ docker-compose.backend-only.yml Dockerfile.backend
+        
+        # Setup SSH
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Deploy script (idempotent)
+        cat > deploy.sh << 'EOF'
+        #!/bin/bash
+        set -e
+        
+        # Create project directory (idempotent)
+        mkdir -p /home/ec2-user/acadion
+        cd /home/ec2-user/acadion
+        
+        # Extract code
+        tar -xzf /tmp/backend-deploy.tar.gz
+        
+        # Create environment file (idempotent)
+        cat > backend/.env << 'ENVEOF'
+        SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
+        SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
+        SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+        PINECONE_ENVIRONMENT=${{ secrets.PINECONE_ENVIRONMENT }}
+        PINECONE_INDEX_NAME=${{ secrets.PINECONE_INDEX_NAME }}
+        FACE_THRESHOLD=0.6
+        REDIS_URL=redis://redis:6379
+        ENVEOF
+        
+        # Stop existing containers (idempotent)
+        docker-compose -f docker-compose.backend-only.yml down --remove-orphans 2>/dev/null || true
+        
+        # Clean up old containers (idempotent)
+        docker container prune -f || true
+        docker image prune -f || true
+        
+        # Start services
+        docker-compose -f docker-compose.backend-only.yml up -d --build
+        
+        # Wait and health check
+        echo "⏳ Waiting for backend to start..."
+        for i in {1..30}; do
+          if curl -f http://localhost:8000/api/health 2>/dev/null; then
+            echo "✅ Backend is healthy"
+            exit 0
+          fi
+          sleep 2
+        done
+        
+        echo "❌ Backend health check failed"
+        docker-compose -f docker-compose.backend-only.yml logs
+        exit 1
+        EOF
+        
+        # Execute deployment
+        scp -i key.pem -o StrictHostKeyChecking=no backend-deploy.tar.gz ec2-user@${{ env.EC2_HOST }}:/tmp/
+        scp -i key.pem -o StrictHostKeyChecking=no deploy.sh ec2-user@${{ env.EC2_HOST }}:/tmp/
+        ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'chmod +x /tmp/deploy.sh && /tmp/deploy.sh'
+    
+    - name: Final Health Check
+      if: github.ref == 'refs/heads/main'
+      run: |
+        echo "🔍 Final health check..."
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > key.pem
+        chmod 600 key.pem
+        
+        # Test backend health
+        if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -f http://localhost:8000/api/health'; then
+          echo "✅ Backend deployment successful!"
+          echo "🌐 Backend URL: http://${{ env.EC2_HOST }}:8000"
+          echo "📚 API Docs: http://${{ env.EC2_HOST }}:8000/docs"
+        else
+          echo "❌ Backend deployment failed"
+          exit 1
+        fi

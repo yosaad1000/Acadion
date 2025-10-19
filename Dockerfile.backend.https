@@ -1,0 +1,38 @@
+# Production Backend Dockerfile with HTTPS support
+FROM animcogn/face_recognition
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies (skip if repositories are unavailable)
+RUN apt-get update || true && \
+    (apt-get install -y curl || true) && \
+    rm -rf /var/lib/apt/lists/* || true
+
+# Copy requirements first for better caching
+COPY backend/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
+COPY backend/ .
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Health check (using python instead of curl for compatibility)
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
+
+# Expose the port
+EXPOSE 8000
+
+# Run the application using python main.py to enable SSL detection
+CMD ["python", "main.py"]

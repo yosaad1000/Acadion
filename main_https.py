@@ -1,0 +1,70 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from app.config import settings
+from app.routers import auth, subjects, attendance, supabase_auth, notifications, sessions, assignments, google_integration
+# from app.routers import face_migration  # Temporarily disabled due to Supabase client initialization issue
+
+app = FastAPI(
+    title="AI-Powered Student Management Platform API",
+    description="Comprehensive Student Management System with Facial Attendance Recognition",
+    version="2.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Trusted host middleware
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"]
+)
+
+# Include routers
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(supabase_auth.router, prefix="/api/supabase-auth", tags=["Supabase Authentication"])
+app.include_router(subjects.router, prefix="/api/subjects", tags=["Subjects"])
+app.include_router(sessions.router, prefix="/api/sessions", tags=["Sessions"])
+app.include_router(assignments.router, prefix="/api/assignments", tags=["Assignments"])
+app.include_router(attendance.router, prefix="/api/attendance", tags=["Attendance"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(google_integration.router, tags=["Google Integration"])
+# app.include_router(face_migration.router, tags=["Face Migration"])  # Temporarily disabled
+
+@app.get("/")
+async def root():
+    return {"message": "AI-Powered Student Management Platform API v2.0 - Powered by Supabase"}
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "database": "supabase", "version": "2.0.0"}
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    
+    # Check if SSL certificates exist
+    ssl_keyfile = "/app/ssl/key.pem"
+    ssl_certfile = "/app/ssl/cert.pem"
+    
+    if os.path.exists(ssl_keyfile) and os.path.exists(ssl_certfile):
+        print("🔒 Starting server with HTTPS...")
+        uvicorn.run(
+            app, 
+            host="0.0.0.0", 
+            port=8000, 
+            reload=True,
+            ssl_keyfile=ssl_keyfile,
+            ssl_certfile=ssl_certfile
+        )
+    else:
+        print("⚠️  SSL certificates not found, starting with HTTP...")
+        uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
