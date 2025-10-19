@@ -125,12 +125,20 @@ jobs:
         chmod +x generate-ssl.sh
         ./generate-ssl.sh
         
-        # Stop existing containers
-        docker-compose -f docker-compose.nginx.yml down || true
-        docker-compose -f docker-compose.backend-only.yml down || true
+        # Clean up existing containers completely
+        echo "🧹 Cleaning up existing containers..."
+        docker-compose -f docker-compose.nginx.yml down --remove-orphans || true
+        docker-compose -f docker-compose.backend-only.yml down --remove-orphans || true
+        
+        # Remove any conflicting containers
+        docker rm -f acadion-backend acadion-redis acadion-nginx 2>/dev/null || true
+        
+        # Clean up unused networks and volumes
+        docker network prune -f || true
+        docker volume prune -f || true
         
         # Build and start services with Nginx
-        docker-compose -f docker-compose.nginx.yml up -d --build
+        docker-compose -f docker-compose.nginx.yml up -d --build --remove-orphans
         
         # Wait for services to be ready
         echo "⏳ Waiting for services to start..."
