@@ -120,11 +120,6 @@ jobs:
         AWS_REGION=us-east-1
         ENVEOF
         
-        # Generate SSL certificates
-        echo "🔐 Generating SSL certificates..."
-        chmod +x generate-ssl.sh
-        ./generate-ssl.sh
-        
         # Clean up existing containers completely
         echo "🧹 Cleaning up existing containers..."
         docker-compose -f docker-compose.nginx.yml down --remove-orphans || true
@@ -137,19 +132,42 @@ jobs:
         docker network prune -f || true
         docker volume prune -f || true
         
-        # Build and start services with Nginx
-        docker-compose -f docker-compose.nginx.yml up -d --build --remove-orphans
-        
-        # Wait for services to be ready
-        echo "⏳ Waiting for services to start..."
-        sleep 15
-        
-        # Health check (now via HTTPS through Nginx)
-        if curl -k -f https://localhost/api/health; then
-          echo "✅ Backend deployment successful!"
+        # Check if domain SSL certificates exist
+        if [ -f /etc/letsencrypt/live/api.acadion.online/fullchain.pem ]; then
+            echo "🔐 Domain SSL certificates found, using nginx with HTTPS..."
+            docker-compose -f docker-compose.nginx.yml up -d --build --remove-orphans
+            
+            # Wait for services to be ready
+            echo "⏳ Waiting for services to start..."
+            sleep 15
+            
+            # Health check via domain
+            if curl -f https://api.acadion.online/api/health; then
+                echo "✅ Backend deployment successful!"
+            else
+                echo "❌ Domain health check failed, trying localhost..."
+                if curl -k -f https://localhost/api/health; then
+                    echo "✅ Backend deployment successful (localhost)!"
+                else
+                    echo "❌ Backend health check failed"
+                    exit 1
+                fi
+            fi
         else
-          echo "❌ Backend health check failed"
-          exit 1
+            echo "🔐 No domain SSL certificates found, using backend-only deployment..."
+            docker-compose -f docker-compose.backend-only.yml up -d --build --remove-orphans
+            
+            # Wait for services to be ready
+            echo "⏳ Waiting for services to start..."
+            sleep 15
+            
+            # Health check via HTTP
+            if curl -f http://localhost:8000/api/health; then
+                echo "✅ Backend deployment successful!"
+            else
+                echo "❌ Backend health check failed"
+                exit 1
+            fi
         fi
         
         echo "🎉 Backend deployment completed!"
@@ -176,13 +194,28 @@ jobs:
         echo "⏳ Waiting additional 10 seconds for backend to be fully ready..."
         sleep 10
         
-        # Try health check with retries (now via HTTPS through Nginx)
+        # Try health check with retries (check both HTTPS and HTTP)
         for i in {1..3}; do
           echo "🔍 Health check attempt $i/3..."
-          if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -k -f https://localhost/api/health'; then
-            echo "✅ Backend is healthy"
+          
+          # Try HTTPS first (if domain SSL is set up)
+          if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -f https://api.acadion.online/api/health 2>/dev/null'; then
+            echo "✅ Backend is healthy (HTTPS domain)"
             exit 0
           fi
+          
+          # Try HTTPS localhost (if nginx with self-signed certs)
+          if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -k -f https://localhost/api/health 2>/dev/null'; then
+            echo "✅ Backend is healthy (HTTPS localhost)"
+            exit 0
+          fi
+          
+          # Try HTTP (if backend-only deployment)
+          if ssh -i key.pem -o StrictHostKeyChecking=no ec2-user@${{ env.EC2_HOST }} 'curl -f http://localhost:8000/api/health 2>/dev/null'; then
+            echo "✅ Backend is healthy (HTTP)"
+            exit 0
+          fi
+          
           echo "⏳ Waiting 5 seconds before retry..."
           sleep 5
         done
@@ -195,10 +228,10 @@ jobs:
         echo "🎉 Backend deployment completed successfully!"
         echo ""
         echo "🌐 Backend URLs:"
-        echo "   HTTPS API: https://${{ env.EC2_HOST }}"
-        echo "   API Health: https://${{ env.EC2_HOST }}/api/health"
-        echo "   API Docs: https://${{ env.EC2_HOST }}/docs"
+        echo "   Domain API: https://api.acadion.online (if SSL configured)"
+        echo "   IP API: https://${{ env.EC2_HOST }} (if nginx running)"
+        echo "   Direct API: http://${{ env.EC2_HOST }}:8000 (if backend-only)"
         echo ""
         echo "🔧 Management:"
         echo "   SSH: ssh -i acadion-key.pem ec2-user@${{ env.EC2_HOST }}"
-        echo "   Logs: ssh ec2-user@${{ env.EC2_HOST }} 'cd acadion && docker-compose -f docker-compose.nginx.yml logs'"
+        echo "   Logs: ssh ec2-user@${{ env.EC2_HOST }} 'cd acadion && docker-compose logs'"
