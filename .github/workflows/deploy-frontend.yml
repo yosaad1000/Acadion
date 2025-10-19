@@ -49,18 +49,15 @@ jobs:
         
         cd frontend
         
-        # Configure git to avoid author issues
-        git config --global user.email "action@github.com"
-        git config --global user.name "GitHub Action"
+        # Set Vercel project configuration
+        echo '{"orgId":"${{ secrets.VERCEL_ORG_ID }}","projectId":"${{ secrets.VERCEL_PROJECT_ID }}"}' > .vercel/project.json
         
-        # Pull Vercel environment information
-        vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        # Build the project locally
+        npm ci
+        npm run build
         
-        # Build project
-        vercel build --token=${{ secrets.VERCEL_TOKEN }}
-        
-        # Deploy prebuilt project (avoids git author issues)
-        DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} --yes)
+        # Deploy the built files directly (bypasses git entirely)
+        DEPLOYMENT_URL=$(vercel deploy ./dist --token=${{ secrets.VERCEL_TOKEN }} --yes --force)
         echo "preview_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
         echo "🌐 Preview: $DEPLOYMENT_URL"
       env:
@@ -75,18 +72,15 @@ jobs:
         
         cd frontend
         
-        # Configure git to avoid author issues
-        git config --global user.email "action@github.com"
-        git config --global user.name "GitHub Action"
+        # Set Vercel project configuration
+        echo '{"orgId":"${{ secrets.VERCEL_ORG_ID }}","projectId":"${{ secrets.VERCEL_PROJECT_ID }}"}' > .vercel/project.json
         
-        # Pull Vercel environment information
-        vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        # Build the project locally
+        npm ci
+        npm run build
         
-        # Build project
-        vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        
-        # Deploy prebuilt project (avoids git author issues)
-        DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes)
+        # Deploy the built files directly (bypasses git entirely)
+        DEPLOYMENT_URL=$(vercel deploy ./dist --prod --token=${{ secrets.VERCEL_TOKEN }} --yes --force)
         echo "production_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
         echo "🌐 Production: $DEPLOYMENT_URL"
       env:
