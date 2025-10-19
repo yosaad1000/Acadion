@@ -18,6 +18,7 @@ app = FastAPI(
     description="Comprehensive Student Management System with Facial Attendance Recognition",
     version="2.0.0",
     docs_url="/docs",
+    # Updated deployment workflow - testing automatic deployment
     redoc_url="/redoc"
 )
 
