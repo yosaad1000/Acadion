@@ -13,7 +13,12 @@ import {
   ClockIcon,
   CheckCircleIcon,
   CameraIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  DocumentTextIcon,
+  ChatBubbleLeftRightIcon,
+  ClipboardDocumentListIcon,
+  MicrophoneIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 
 interface EnrolledSubject {
@@ -126,7 +131,7 @@ const StudentDashboard: React.FC = () => {
       {/* Main Content */}
       <div className="container-responsive py-6 sm:py-8">
         {/* Quick Stats */}
-        <div className="grid-responsive-3 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 sm:mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-colors">
             <div className="flex items-center">
               <BookOpenIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 dark:text-blue-400 flex-shrink-0" />
@@ -141,8 +146,8 @@ const StudentDashboard: React.FC = () => {
             <div className="flex items-center">
               <CalendarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 dark:text-green-400 flex-shrink-0" />
               <div className="ml-3 sm:ml-4">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">0</div>
-                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Today's Classes</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">5</div>
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Documents</div>
               </div>
             </div>
           </div>
@@ -151,12 +156,74 @@ const StudentDashboard: React.FC = () => {
             <div className="flex items-center">
               <CheckCircleIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 dark:text-purple-400 flex-shrink-0" />
               <div className="ml-3 sm:ml-4">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {user?.is_face_registered ? 'Yes' : 'No'}
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Face Registered</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">3</div>
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Quizzes Taken</div>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-colors">
+            <div className="flex items-center">
+              <AcademicCapIcon className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 dark:text-orange-400 flex-shrink-0" />
+              <div className="ml-3 sm:ml-4">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">87%</div>
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Avg Score</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* LMS Features Quick Access */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-6 sm:mb-8 transition-colors">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">Learning Tools</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            <Link
+              to="/student/documents"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <DocumentTextIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 dark:text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Documents</div>
+            </Link>
+            
+            <Link
+              to="/student/chat"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <ChatBubbleLeftRightIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 dark:text-green-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">AI Chat</div>
+            </Link>
+            
+            <Link
+              to="/student/quizzes"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <ClipboardDocumentListIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 dark:text-purple-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Quizzes</div>
+            </Link>
+            
+            <Link
+              to="/student/interview"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <MicrophoneIcon className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 dark:text-red-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Interview</div>
+            </Link>
+            
+            <Link
+              to="/student/analytics"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <ChartBarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 dark:text-orange-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Analytics</div>
+            </Link>
+            
+            <Link
+              to="/student/schedule"
+              className="flex flex-col items-center p-3 sm:p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation group"
+            >
+              <CalendarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-teal-500 dark:text-teal-400 mb-2 group-hover:scale-110 transition-transform" />
+              <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 text-center">Schedule</div>
+            </Link>
           </div>
         </div>
 
