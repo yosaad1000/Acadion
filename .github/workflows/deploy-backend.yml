@@ -41,13 +41,14 @@ jobs:
       run: |
         echo "🚀 Deploying backend with domain SSL to EC2..."
         
-        # Create deployment package (include nginx config)
+        # Create deployment package (include nginx configs)
         tar -czf backend-deploy.tar.gz \
           backend/ \
           docker-compose.nginx.yml \
           docker-compose.backend-only.yml \
           Dockerfile.backend \
           nginx.conf \
+          nginx-domain.conf \
           generate-ssl.sh
         
         # Setup SSH
@@ -90,6 +91,9 @@ jobs:
         # Check if SSL certificates exist for domain
         if sudo test -f /etc/letsencrypt/live/api.acadion.online/fullchain.pem; then
           echo "🔐 SSL certificates found, deploying with nginx + HTTPS..."
+          
+          # Use domain nginx config if SSL exists
+          cp nginx-domain.conf nginx.conf
           docker-compose -f docker-compose.nginx.yml up -d --build
           
           # Wait for services
