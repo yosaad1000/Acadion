@@ -39,10 +39,15 @@ if [ "$DOMAIN_IP" != "$SERVER_IP" ] || [ "$API_IP" != "$SERVER_IP" ]; then
     fi
 fi
 
+# Clean up problematic repositories
+echo "🧹 Cleaning up repositories..."
+sudo yum-config-manager --disable ngrok 2>/dev/null || true
+sudo rm -f /etc/yum.repos.d/ngrok.repo 2>/dev/null || true
+
 # Install required packages
 echo "📦 Installing nginx and certbot..."
-sudo yum update -y
-sudo yum install -y nginx certbot python3-certbot-nginx
+sudo yum update -y --disablerepo=ngrok
+sudo yum install -y nginx certbot python3-certbot-nginx --disablerepo=ngrok
 
 # Create nginx configuration for both domains
 echo "📝 Creating nginx configuration..."
@@ -66,7 +71,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name $DOMAIN;
     
     # SSL certificates (will be added by certbot)
@@ -115,7 +121,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name $API_DOMAIN;
     
     # SSL certificates (will be added by certbot)
@@ -126,23 +133,23 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
     
-    # CORS headers
-    add_header Access-Control-Allow-Origin "*" always;
-    add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
-    add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization" always;
-    
-    # Handle preflight requests
-    if (\$request_method = 'OPTIONS') {
-        add_header Access-Control-Allow-Origin "*";
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
-        add_header Content-Length 0;
-        add_header Content-Type text/plain;
-        return 204;
-    }
-    
     # Proxy to FastAPI backend
     location / {
+        # CORS headers
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization" always;
+        
+        # Handle preflight requests
+        if (\$request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin "*";
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
+            add_header Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization";
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+            return 204;
+        }
+        
         proxy_pass http://localhost:8000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
