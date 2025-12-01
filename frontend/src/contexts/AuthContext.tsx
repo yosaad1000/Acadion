@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import type { User } from '../lib/supabase';
+import { OrganizationService } from '../services/organizationService';
+import type { User, Organization } from '../lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  organization: Organization | null;
   isAuthenticated: boolean;
   loading: boolean;
   userRoles: string[];
@@ -16,6 +18,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   switchRole: (role: 'teacher' | 'student') => Promise<void>;
   addRole: (role: 'teacher' | 'student') => Promise<void>;
+  ensureProfile: () => Promise<boolean>;
   isTeacher: boolean;
   isStudent: boolean;
 }
@@ -25,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRoles, setUserRoles] = useState<string[]>(['student']);
   const [currentRole, setCurrentRole] = useState<string>('student');
@@ -58,128 +62,102 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isFetchingProfile.current = true;
 
       try {
-        // Try to fetch user profile with a timeout
-        const profilePromise = supabase
-          .from('users')
-          .select('*')
-          .eq('auth_user_id', session.user.id)
-          .maybeSingle();
+        console.log('🔍 Fetching user profile with organization context...');
+        
+        // First, try to get existing profile with organization context
+        const profileResult = await OrganizationService.getUserProfileWithContext();
+        
+        if (profileResult.success && profileResult.user_id) {
+          console.log('✅ User profile found with organization context');
+          
+          // Create user object from RPC result
+          const userData: User = {
+            auth_user_id: session.user.id,
+            user_id: profileResult.user_id,
+            organization_id: profileResult.organization_id || '',
+            email: profileResult.email || session.user.email || '',
+            name: profileResult.name || session.user.user_metadata?.name || 'Unknown User',
+            user_type: profileResult.active_role as 'teacher' | 'student' || 'student',
+            active_role: profileResult.active_role as 'teacher' | 'student' || 'student',
+            auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+            is_face_registered: false, // Will be updated from database if needed
+            created_at: new Date().toISOString()
+          };
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-        );
-
-        let userData, error;
-        try {
-          const result = await Promise.race([profilePromise, timeoutPromise]) as any;
-          userData = result.data;
-          error = result.error;
-        } catch (timeoutError) {
-          console.warn('⚠️ Profile fetch timeout, using fallback');
-          error = null;
-          userData = null;
-        }
-
-        console.log('📊 Profile query result:', { userData, error });
-
-        if (userData && !error) {
-          console.log('✅ User profile found in database');
-
-          // Fetch user roles
-          const { data: userRolesData } = await supabase
-            .from('user_roles')
-            .select('role_type')
-            .eq('auth_user_id', session.user.id)
-            .eq('is_active', true);
-
-          const roles = userRolesData?.map(r => r.role_type) || [userData.active_role || 'student'];
+          // Get organization details if we have organization_id
+          if (profileResult.organization_id) {
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('organization_id', profileResult.organization_id)
+              .single();
+            
+            if (orgData) {
+              setOrganization(orgData);
+              userData.organization = orgData;
+            }
+          }
 
           setUser(userData);
           currentUserRef.current = userData;
-          setCurrentRole(userData.active_role || 'student');
-          setUserRoles(roles);
-
-          console.log('✅ Profile loaded successfully');
+          setCurrentRole(userData.active_role);
+          setUserRoles([userData.active_role]);
           localStorage.removeItem('selected_user_type');
           return;
         }
 
-        // No user profile found, create one
-        console.log('⚠️ No user profile found, creating new profile...');
-
-        const userType = localStorage.getItem('oauth_user_type') ||
-          localStorage.getItem('selected_user_type') ||
-          session.user.user_metadata?.user_type ||
-          'student';
-
-        // Creating user profile
-
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert({
+        // No profile found, create one using RPC function
+        console.log('⚠️ No user profile found, creating with organization context...');
+        
+        const createResult = await OrganizationService.ensureUserProfile();
+        
+        if (createResult.success && createResult.user_id) {
+          console.log('✅ User profile created with organization context');
+          
+          // Create user object from creation result
+          const userData: User = {
             auth_user_id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
-            active_role: userType,
+            user_id: createResult.user_id,
+            organization_id: createResult.organization_id || '',
+            email: createResult.email || session.user.email || '',
+            name: createResult.name || session.user.user_metadata?.name || 'Unknown User',
+            user_type: createResult.active_role as 'teacher' | 'student' || 'student',
+            active_role: createResult.active_role as 'teacher' | 'student' || 'student',
             auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-            is_face_registered: false
-          })
-          .select()
-          .single();
+            is_face_registered: false,
+            created_at: new Date().toISOString()
+          };
 
-        if (newUser && !insertError) {
-          console.log('✅ Created new user profile in database');
+          // Get organization details
+          if (createResult.organization_id) {
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('organization_id', createResult.organization_id)
+              .single();
+            
+            if (orgData) {
+              setOrganization(orgData);
+              userData.organization = orgData;
+            }
+          }
 
-          // Create user role
-          await supabase
-            .from('user_roles')
-            .insert({
-              auth_user_id: session.user.id,
-              role_type: userType,
-              institution_context: 'default',
-              is_active: true
-            });
-
-          setUser(newUser);
-          currentUserRef.current = newUser;
-          setCurrentRole(userType);
-          setUserRoles([userType]);
+          setUser(userData);
+          currentUserRef.current = userData;
+          setCurrentRole(userData.active_role);
+          setUserRoles([userData.active_role]);
           localStorage.removeItem('selected_user_type');
           return;
         }
 
-        // If database operations fail, create temporary user
-        console.warn('⚠️ Database operations failed, creating temporary user');
-        const tempUser: User = {
-          auth_user_id: session.user.id,
-          user_id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
-          user_type: userType as 'teacher' | 'student',
-          active_role: userType as 'teacher' | 'student',
-          auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-          is_face_registered: false,
-          created_at: new Date().toISOString()
-        };
-
-        setUser(tempUser);
-        currentUserRef.current = tempUser;
-        setCurrentRole(userType);
-        setUserRoles([userType]);
-        localStorage.removeItem('selected_user_type');
-
-      } catch (error) {
-        console.error('❌ Profile fetch error:', error);
-
-        // Create fallback user
-        const userType = localStorage.getItem('oauth_user_type') ||
-          localStorage.getItem('selected_user_type') ||
-          session.user.user_metadata?.user_type ||
-          'student';
-
+        // If RPC functions fail, create fallback user (should rarely happen)
+        console.warn('⚠️ RPC functions failed, creating fallback user');
+        const userType = localStorage.getItem('oauth_user_type') || 'student';
+        
         const fallbackUser: User = {
           auth_user_id: session.user.id,
           user_id: session.user.id,
+          organization_id: '', // Will be empty until profile is properly created
           email: session.user.email || '',
           name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
           user_type: userType as 'teacher' | 'student',
@@ -195,7 +173,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserRoles([userType]);
         localStorage.removeItem('selected_user_type');
 
-        console.log('🔧 Created fallback user profile');
+      } catch (error) {
+        console.error('❌ Profile fetch error:', error);
+        
+        // Create minimal fallback user
+        const userType = localStorage.getItem('oauth_user_type') || 'student';
+        const fallbackUser: User = {
+          auth_user_id: session.user.id,
+          user_id: session.user.id,
+          organization_id: '',
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || 'Unknown User',
+          user_type: userType as 'teacher' | 'student',
+          active_role: userType as 'teacher' | 'student',
+          auth_provider: 'google',
+          is_face_registered: false,
+          created_at: new Date().toISOString()
+        };
+
+        setUser(fallbackUser);
+        currentUserRef.current = fallbackUser;
+        setCurrentRole(userType);
+        setUserRoles([userType]);
       } finally {
         isFetchingProfile.current = false;
         console.log('🏁 Profile fetch process completed');
@@ -323,34 +322,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🔄 Switching role to:', role);
 
-      // Use the database function to switch role properly
-      const { data: switchResult, error } = await supabase.rpc('switch_user_role', {
-        p_auth_user_id: session.user.id,
-        p_role_type: role,
-        p_institution_context: 'default'
-      });
+      // Use the organization service to switch role
+      const switchResult = await OrganizationService.switchUserRole(role);
 
-      if (error) {
-        console.error('Error switching role:', error);
-        throw error;
-      }
-
-      if (!switchResult) {
-        throw new Error(`You don't have permission to switch to ${role} role`);
+      if (!switchResult.success) {
+        throw new Error(switchResult.error || `Failed to switch to ${role} role`);
       }
 
       // Update local state
       setCurrentRole(role);
 
-      // Fetch updated user profile to get the latest active_role
-      const { data: updatedUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_user_id', session.user.id)
-        .single();
-
-      if (updatedUser) {
+      // Update user object
+      if (user) {
+        const updatedUser = {
+          ...user,
+          active_role: role,
+          user_type: role
+        };
         setUser(updatedUser);
+        currentUserRef.current = updatedUser;
       }
 
       console.log('✅ Role switched successfully to:', role);
@@ -398,6 +388,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const ensureProfile = async (): Promise<boolean> => {
+    if (!session?.user) {
+      console.log('❌ No session found for profile creation');
+      return false;
+    }
+
+    try {
+      console.log('🔄 Ensuring user profile exists...');
+      const result = await OrganizationService.ensureUserProfile();
+      
+      if (result.success) {
+        console.log('✅ Profile ensured successfully');
+        // Refresh the user profile
+        await fetchUserProfile(session);
+        return true;
+      } else {
+        console.error('❌ Failed to ensure profile:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error ensuring profile:', error);
+      return false;
+    }
+  };
+
   const signOut = async () => {
     console.log('🚪 Signing out user');
 
@@ -409,6 +424,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     currentUserRef.current = null;
     setSession(null);
+    setOrganization(null);
     setUserRoles(['student']);
     setCurrentRole('student');
     setLoading(false);
@@ -426,6 +442,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         session,
+        organization,
         isAuthenticated: !!session,
         loading,
         userRoles,
@@ -436,6 +453,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         switchRole,
         addRole,
+        ensureProfile,
         isTeacher: currentRole === 'teacher',
         isStudent: currentRole === 'student',
       }}

@@ -8,6 +8,12 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from app.middleware.supabase_auth import get_current_user_supabase
+from app.middleware.organization_auth import (
+    get_organization_context, 
+    validate_teacher_facial_access,
+    validate_student_facial_access,
+    OrganizationContext
+)
 from app.services.face_recognition_client import face_recognition_client
 from app.services.local_supabase import LocalSupabase
 import logging
@@ -69,16 +75,13 @@ async def register_student_face(
     file: UploadFile = File(...),
     user_id: str = None,
     subject_ids: Optional[str] = None,  # Comma-separated subject IDs
-    current_user = Depends(get_current_user_supabase)
+    org_context: OrganizationContext = Depends(validate_teacher_facial_access)
 ):
     """
-    Register a student's face for recognition
-    Teachers can register faces for their students
+    Register a student's face for recognition - ORGANIZATION SCOPED
+    Teachers can register faces for their students within their organization
     """
     try:
-        if current_user.user_type != "teacher":
-            raise HTTPException(status_code=403, detail="Only teachers can register faces")
-        
         # Validate file type
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
@@ -88,17 +91,25 @@ async def register_student_face(
         if subject_ids:
             subject_list = [s.strip() for s in subject_ids.split(',') if s.strip()]
         
-        # Verify teacher has access to the subjects
+        # Verify teacher has access to the subjects within their organization
         for subject_id in subject_list:
             subject = await db.get_subject_by_id(subject_id)
-            if not subject or subject["teacher_id"] != current_user.user_id:
+            if not subject or subject["teacher_id"] != org_context.auth_user_id:
                 raise HTTPException(status_code=403, detail=f"Access denied to subject {subject_id}")
+            
+            # Verify subject belongs to the same organization
+            if subject.get("organization_id") != org_context.organization_id:
+                raise HTTPException(status_code=403, detail=f"Subject {subject_id} not in your organization")
         
-        # Verify student exists and is enrolled in the subjects
+        # Verify student exists and belongs to the same organization
         student = await db.get_user_by_id(user_id)
         if not student:
             raise HTTPException(status_code=404, detail="Student not found")
         
+        if student.get("organization_id") != org_context.organization_id:
+            raise HTTPException(status_code=403, detail="Student not in your organization")
+        
+        # Verify student is enrolled in the subjects
         for subject_id in subject_list:
             is_enrolled = await db.is_student_enrolled(subject_id, user_id)
             if not is_enrolled:
@@ -107,18 +118,25 @@ async def register_student_face(
         # Read image data
         image_data = await file.read()
         
-        # Register face using microservice
-        result = await face_recognition_client.register_face(user_id, image_data, subject_list)
+        # Register face using organization-scoped service
+        from app.services.face_recognition import get_face_recognition_service
+        result = get_face_recognition_service().process_student_photo(
+            user_id, 
+            image_data, 
+            org_context.organization_id,
+            subject_list
+        )
         
-        if result.success:
+        if result["success"]:
             return {
-                "message": f"Face registered successfully for student {user_id}",
-                "user_id": result.user_id,
-                "encoding_stored": result.encoding_stored,
-                "subject_ids": result.subject_ids
+                "message": f"Face registered successfully for student {user_id} in organization {org_context.organization_name}",
+                "user_id": user_id,
+                "organization_id": org_context.organization_id,
+                "encoding_stored": result["encoding_stored"],
+                "subject_ids": result["subject_ids"]
             }
         else:
-            raise HTTPException(status_code=400, detail=result.message)
+            raise HTTPException(status_code=400, detail=result["message"])
             
     except HTTPException:
         raise

@@ -8,6 +8,7 @@ from app.settings import settings
 from app.models.user import UserCreate, UserLogin, UserResponse, GoogleAuthRequest, AuthProvider
 from app.services.local_supabase import LocalSupabase
 from app.services.google_oauth import google_integration_service
+from app.services.user_profile_service import user_profile_service
 from app.middleware.supabase_auth import get_current_user_supabase
 import logging
 import uuid
@@ -258,13 +259,18 @@ async def register_face(
     file: UploadFile = File(...),
     current_user: UserResponse = Depends(get_current_user_supabase)
 ):
-    """Register face for student (first-time setup)"""
+    """Register face for student (first-time setup) - FACIAL RECOGNITION FEATURE"""
     try:
         if current_user.user_type != "student":
             raise HTTPException(status_code=403, detail="Only students can register faces")
         
         if current_user.is_face_registered:
             raise HTTPException(status_code=400, detail="Face already registered")
+        
+        # Ensure user profile exists with organization context
+        profile_result = await user_profile_service.ensure_user_profile(current_user.auth_user_id)
+        if not profile_result.get("success"):
+            raise HTTPException(status_code=500, detail="Failed to ensure user profile")
         
         # Validate file type
         if not file.content_type.startswith('image/'):
@@ -273,19 +279,29 @@ async def register_face(
         # Read image data
         image_data = await file.read()
         
-        # Process face encoding with Pinecone
+        # Process face encoding with Pinecone using organization context
         from app.services.face_recognition import get_face_recognition_service
-        result = get_face_recognition_service().process_student_photo(current_user.user_id, image_data)
+        organization_id = profile_result.get("organization_id")
+        
+        result = get_face_recognition_service().process_student_photo(
+            current_user.user_id, 
+            image_data, 
+            organization_id
+        )
         
         if result["success"]:
-            # Update user's face registration status
-            await db.update_user_face_status(current_user.user_id, True)
+            # Update user's face registration status using the profile service
+            success = await user_profile_service.update_face_registration_status(current_user.user_id, True)
             
-            return {
-                "message": "Face registered successfully and stored in Pinecone",
-                "user_id": current_user.user_id,
-                "encoding_stored": True
-            }
+            if success:
+                return {
+                    "message": "Face registered successfully with organization context",
+                    "user_id": current_user.user_id,
+                    "organization_id": organization_id,
+                    "encoding_stored": True
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Face encoding stored but failed to update profile")
         else:
             raise HTTPException(status_code=400, detail=result["message"])
             
@@ -294,3 +310,24 @@ async def register_face(
     except Exception as e:
         logger.error(f"Face registration error: {e}")
         raise HTTPException(status_code=500, detail="Face registration failed")
+
+@router.post("/ensure-profile")
+async def ensure_user_profile_endpoint(current_user: UserResponse = Depends(get_current_user_supabase)):
+    """Ensure user profile exists after OAuth - needed for facial recognition features"""
+    try:
+        result = await user_profile_service.ensure_user_profile(current_user.auth_user_id)
+        
+        if result.get("success"):
+            return {
+                "message": result.get("message"),
+                "user_id": result.get("user_id"),
+                "organization_id": result.get("organization_id")
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result.get("error", "Failed to ensure profile"))
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Profile creation error: {e}")
+        raise HTTPException(status_code=500, detail="Profile creation failed")

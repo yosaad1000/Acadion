@@ -74,6 +74,19 @@ async def mark_attendance_by_face(
         if not subject or subject["teacher_id"] != current_user.user_id:
             raise HTTPException(status_code=403, detail="Access denied")
         
+        # TODO: Add organization context and validate facial attendance module access
+        # For now, we'll assume organization_id is available from user context
+        # This will be implemented in task 3 when we add multi-tenant authentication
+        # organization_id = current_user.organization_id
+        # from app.services.organization_service import get_organization_service
+        # org_service = get_organization_service()
+        # has_access = await org_service.validate_facial_attendance_access(organization_id)
+        # if not has_access:
+        #     raise HTTPException(
+        #         status_code=403, 
+        #         detail="Facial attendance module not enabled for your organization. Please upgrade to access this feature."
+        #     )
+        
         # Validate file type
         if not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")

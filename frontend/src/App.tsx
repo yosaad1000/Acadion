@@ -12,6 +12,8 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AuthCallback from './pages/AuthCallback';
+import OrganizationOnboarding from './pages/OrganizationOnboarding';
+import OrganizationOnboardingSuccess from './pages/OrganizationOnboardingSuccess';
 import StudentDashboard from './pages/StudentDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import CreateClass from './pages/CreateClass';
@@ -146,6 +148,14 @@ const AppRoutes: React.FC = () => {
         element={isAuthenticated ? <Navigate to="/dashboard" /> : <Signup />} 
       />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route 
+        path="/onboard/organization" 
+        element={isAuthenticated ? <Navigate to="/dashboard" /> : <OrganizationOnboarding />} 
+      />
+      <Route 
+        path="/onboard/success" 
+        element={isAuthenticated ? <Navigate to="/dashboard" /> : <OrganizationOnboardingSuccess />} 
+      />
       <Route
         path="/*"
         element={

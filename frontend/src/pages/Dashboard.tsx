@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import InviteCodeDisplay from '../components/InviteCodeDisplay';
+import OrganizationContext from '../components/OrganizationContext';
 import { PlusIcon, UserGroupIcon, BookOpenIcon, CalendarIcon } from '@heroicons/react/24/outline';
 
 interface Subject {
@@ -102,6 +103,11 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Organization Context */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <OrganizationContext className="mb-6" />
       </div>
 
       {/* Main Content */}

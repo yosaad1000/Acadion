@@ -2,15 +2,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.settings import settings
-from app.routers import auth, subjects, attendance, supabase_auth, notifications, sessions, assignments, google_integration, students, face_recognition, test_router
+from app.routers import auth, subjects, attendance, supabase_auth, notifications, sessions, assignments, google_integration, students, face_recognition, test_router, async_attendance, organizations
 from app.middleware.logging_middleware import LoggingMiddleware
 from app.config.logging import setup_logging, get_logger
-from app.config.xray import configure_xray, add_xray_middleware, XRayRequestMiddleware
 # from app.routers import face_migration  # Temporarily disabled due to Supabase client initialization issue
 
-# Initialize structured logging and X-Ray tracing
+# Initialize structured logging
 setup_logging()
-configure_xray()
 logger = get_logger(__name__)
 
 app = FastAPI(
@@ -69,10 +67,6 @@ async def startup_event():
         logger.warning("Application will continue with reduced performance")
         # Don't fail startup, just log the error
 
-# X-Ray middleware (should be first for complete tracing)
-add_xray_middleware(app)
-app.add_middleware(XRayRequestMiddleware)
-
 # Logging middleware (should be early to capture all requests)
 app.add_middleware(LoggingMiddleware)
 
@@ -113,7 +107,9 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["Not
 app.include_router(test_router.router, prefix="/api/test", tags=["Test"])
 app.include_router(students.router, prefix="/api/students", tags=["Students"])
 app.include_router(face_recognition.router, prefix="/api/face-recognition", tags=["Face Recognition"])
+app.include_router(async_attendance.router, tags=["Async Attendance"])
 app.include_router(google_integration.router, tags=["Google Integration"])
+app.include_router(organizations.router, prefix="/api/organizations", tags=["Organizations"])
 # app.include_router(face_migration.router, tags=["Face Migration"])  # Temporarily disabled
 
 @app.get("/")

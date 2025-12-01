@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { OrganizationService } from '../services/organizationService';
 
 const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
@@ -85,41 +86,27 @@ const AuthCallback: React.FC = () => {
             console.warn('Could not update user metadata:', updateError);
           }
 
-          // Use the new RPC function to ensure user profile is created
-          console.log('🔄 Creating user profile with RPC function...');
-          const { data: profileResult, error: profileError } = await supabase.rpc('ensure_user_profile');
+          // Use the organization service to ensure user profile is created
+          console.log('🔄 Creating user profile with organization context...');
+          const profileResult = await OrganizationService.ensureUserProfile();
 
-          if (profileError) {
-            console.error('❌ Profile creation error:', profileError);
-            throw new Error(`Failed to create user profile: ${profileError.message}`);
+          if (!profileResult.success) {
+            console.error('❌ Profile creation error:', profileResult.error);
+            throw new Error(`Failed to create user profile: ${profileResult.error}`);
           }
 
           console.log('✅ Profile creation result:', profileResult);
 
           // If user requested a different role than default, handle role switching
           if (userType !== 'student') {
-            console.log('🔄 Adding/switching to requested role:', userType);
+            console.log('🔄 Switching to requested role:', userType);
             
-            // Add the requested role if user doesn't have it
-            const { error: roleError } = await supabase.rpc('add_user_role', {
-              p_auth_user_id: session.user.id,
-              p_role_type: userType
-            });
-
-            if (roleError) {
-              console.error('Error adding role:', roleError);
-            }
-
-            // Switch to the requested role
-            const { error: switchError } = await supabase.rpc('switch_user_role', {
-              p_auth_user_id: session.user.id,
-              p_role_type: userType
-            });
-
-            if (switchError) {
-              console.error('Error switching role:', switchError);
+            const switchResult = await OrganizationService.switchUserRole(userType as 'teacher' | 'student');
+            
+            if (!switchResult.success) {
+              console.error('Error switching role:', switchResult.error);
             } else {
-              console.log('Successfully switched to role:', userType);
+              console.log('✅ Successfully switched to role:', userType);
             }
           }
 

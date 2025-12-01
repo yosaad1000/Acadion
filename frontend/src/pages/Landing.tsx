@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AcademicCapIcon, UserGroupIcon, ChartBarIcon, CameraIcon } from '@heroicons/react/24/outline';
+import { AcademicCapIcon, UserGroupIcon, ChartBarIcon, CameraIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -174,6 +174,25 @@ const Landing: React.FC = () => {
 
         {/* Bottom CTA */}
         <div className="text-center mt-12 sm:mt-16 pt-8 sm:pt-16 border-t border-gray-200 dark:border-gray-700">
+          {/* Organization Creation CTA */}
+          <div className="mb-8 sm:mb-12">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 sm:p-8 border border-purple-100 dark:border-purple-800">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+                Setting up a new institution?
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-6">
+                Create your organization on Acadion and get started with comprehensive student management and AI-powered attendance tracking.
+              </p>
+              <button
+                onClick={() => navigate('/onboard/organization')}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl touch-manipulation"
+              >
+                <BuildingOfficeIcon className="h-5 w-5 mr-2" />
+                Create Organization
+              </button>
+            </div>
+          </div>
+
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 px-4 sm:px-0">
             Already have an account?{' '}
             <button 
