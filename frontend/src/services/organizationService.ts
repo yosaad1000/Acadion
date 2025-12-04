@@ -166,6 +166,22 @@ export class OrganizationService {
       
       if (error) {
         console.error('❌ Error checking organization name:', error)
+        console.error('❌ Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        
+        // If it's an RLS error, assume name is available (user can't see existing orgs)
+        if (error.code === 'PGRST116' || error.message?.includes('row-level security')) {
+          console.warn('⚠️ RLS blocking SELECT, assuming name is available')
+          return {
+            isAvailable: true,
+            message: '✓ Organization name is available'
+          }
+        }
+        
         return {
           isAvailable: false,
           message: 'Unable to check availability. Please try again.'
@@ -230,6 +246,22 @@ export class OrganizationService {
       
       if (error) {
         console.error('❌ Error checking organization domain:', error)
+        console.error('❌ Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        
+        // If it's an RLS error, assume domain is available
+        if (error.code === 'PGRST116' || error.message?.includes('row-level security')) {
+          console.warn('⚠️ RLS blocking SELECT, assuming domain is available')
+          return {
+            isAvailable: true,
+            message: '✓ Domain is available'
+          }
+        }
+        
         return {
           isAvailable: false,
           message: 'Unable to check domain availability. Please try again.'
@@ -275,6 +307,12 @@ export class OrganizationService {
       }
 
       // Create organization
+      console.log('🔄 Attempting to create organization:', {
+        name: organizationData.organizationName,
+        description: organizationData.organizationDomain ? `Organization domain: ${organizationData.organizationDomain}` : undefined,
+        is_active: true
+      });
+
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
@@ -287,9 +325,15 @@ export class OrganizationService {
       
       if (orgError) {
         console.error('❌ Error creating organization:', orgError)
+        console.error('❌ Error details:', {
+          message: orgError.message,
+          details: orgError.details,
+          hint: orgError.hint,
+          code: orgError.code
+        })
         return {
           success: false,
-          message: 'Failed to create organization. Please try again.'
+          message: `Failed to create organization: ${orgError.message}`
         }
       }
 

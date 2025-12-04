@@ -1,20 +1,42 @@
-import face_recognition
-import numpy as np
-from pinecone import Pinecone
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any, TYPE_CHECKING
 import os
-from PIL import Image
 import io
 import base64
 from ..settings import settings
 
+if TYPE_CHECKING:
+    import numpy as np
+    from PIL import Image
+
+try:
+    import face_recognition
+    import numpy as np
+    from PIL import Image
+    FACE_RECOGNITION_AVAILABLE = True
+except ImportError:
+    FACE_RECOGNITION_AVAILABLE = False
+    face_recognition = None
+    np = None
+    Image = None
+
+try:
+    from pinecone import Pinecone
+    PINECONE_AVAILABLE = True
+except ImportError:
+    PINECONE_AVAILABLE = False
+    Pinecone = None
+
 class FaceRecognitionService:
     def __init__(self):
+        if not FACE_RECOGNITION_AVAILABLE:
+            raise ImportError("Face recognition libraries not available. Install with: pip install face-recognition opencv-python-headless Pillow")
+        if not PINECONE_AVAILABLE:
+            raise ImportError("Pinecone not available. Install with: pip install pinecone-client")
         self.pc = Pinecone(api_key=settings.PINECONE_API_KEY)
         self.index = self.pc.Index(settings.PINECONE_INDEX_NAME)
         self.face_threshold = settings.FACE_THRESHOLD
     
-    def extract_face_encoding(self, image_data: bytes) -> Optional[np.ndarray]:
+    def extract_face_encoding(self, image_data: bytes) -> Optional[Any]:
         """Extract face encoding from image bytes"""
         try:
             # Convert bytes to PIL Image
@@ -70,7 +92,7 @@ class FaceRecognitionService:
             print(f"💥 Error extracting face encoding: {e}")
             return None
     
-    def store_face_encoding(self, student_id: str, encoding: np.ndarray, organization_id: str, subject_ids: List[str] = None) -> bool:
+    def store_face_encoding(self, student_id: str, encoding: Any, organization_id: str, subject_ids: List[str] = None) -> bool:
         """Store face encoding in Pinecone with organization and subject metadata"""
         try:
             # Convert numpy array to list for Pinecone
@@ -104,7 +126,7 @@ class FaceRecognitionService:
             print(f"Error storing face encoding: {e}")
             return False
     
-    def find_matching_student(self, encoding: np.ndarray, organization_id: str, subject_id: str = None) -> Optional[Tuple[str, float]]:
+    def find_matching_student(self, encoding: Any, organization_id: str, subject_id: str = None) -> Optional[Tuple[str, float]]:
         """Find matching student by face encoding within organization context, optionally filtered by subject"""
         try:
             # Convert numpy array to list for Pinecone query
@@ -174,7 +196,7 @@ class FaceRecognitionService:
             print(f"Error deleting face encoding: {e}")
             return False
     
-    def update_face_encoding(self, student_id: str, new_encoding: np.ndarray) -> bool:
+    def update_face_encoding(self, student_id: str, new_encoding: Any) -> bool:
         """Update existing face encoding"""
         try:
             # Delete old encoding
@@ -411,6 +433,12 @@ face_recognition_service = None
 def get_face_recognition_service():
     """Get face recognition service instance with lazy initialization"""
     global face_recognition_service
+    if not FACE_RECOGNITION_AVAILABLE:
+        return None
     if face_recognition_service is None:
-        face_recognition_service = FaceRecognitionService()
+        try:
+            face_recognition_service = FaceRecognitionService()
+        except Exception as e:
+            print(f"⚠️  Face recognition service unavailable: {e}")
+            return None
     return face_recognition_service

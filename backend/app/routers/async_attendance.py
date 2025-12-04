@@ -10,7 +10,7 @@ import logging
 
 from ..services.async_attendance_service import get_async_attendance_service
 from ..services.job_tracker import get_job_tracker
-from ..core.auth import get_current_user
+from ..middleware.supabase_auth import get_current_user_supabase as get_current_user
 from ..models.attendance import AttendanceJobResponse, JobStatusResponse, UserJobsResponse
 
 logger = logging.getLogger(__name__)

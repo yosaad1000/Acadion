@@ -299,7 +299,7 @@ class JobTracker:
             logger.error(f"❌ Failed to get user jobs for {user_id}: {e}")
             return []    
     
-async def get_job_statistics(self) -> Dict[str, Any]:
+    async def get_job_statistics(self) -> Dict[str, Any]:
         """Get job processing statistics"""
         try:
             stats = {

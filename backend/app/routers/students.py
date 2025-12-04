@@ -171,7 +171,10 @@ async def upload_student_photo(student_id: str, file: UploadFile = File(...)):
                 student_subjects = []
         
         # Process face encoding with subject metadata
-        result = get_face_recognition_service().process_student_photo(student_id, image_data, student_subjects)
+        face_service = get_face_recognition_service()
+        if face_service is None:
+            raise HTTPException(status_code=503, detail="Face recognition service is not available. Please install required dependencies.")
+        result = face_service.process_student_photo(student_id, image_data, student_subjects)
         
         if result["success"]:
             # Update student record with face encoding status
@@ -205,7 +208,10 @@ async def recognize_student(file: UploadFile = File(...)):
         image_data = await file.read()
         
         # Recognize student
-        result = get_face_recognition_service().recognize_student(image_data)
+        face_service = get_face_recognition_service()
+        if face_service is None:
+            raise HTTPException(status_code=503, detail="Face recognition service is not available. Please install required dependencies.")
+        result = face_service.recognize_student(image_data)
         
         if result["success"]:
             student_id = result["student_id"]
@@ -254,8 +260,13 @@ async def delete_student(student_id: str):
             if not exists:
                 raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
             
-            # Delete face encoding from Pinecone
-            get_face_recognition_service().delete_face_encoding(student_id)
+            # Delete face encoding from Pinecone (if service is available)
+            face_service = get_face_recognition_service()
+            if face_service is not None:
+                try:
+                    face_service.delete_face_encoding(student_id)
+                except Exception as e:
+                    logger.warning(f"Could not delete face encoding for student {student_id}: {e}")
             
             # Delete student from database
             success = await db.delete_student(student_id)

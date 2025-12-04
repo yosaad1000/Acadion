@@ -22,7 +22,7 @@ class CloudWatchMetrics:
             self.namespace = 'Acadion/Application'
             self._connection_healthy = True
             logger.info("CloudWatch metrics service initialized successfully")
-        except (ClientError, NoCredentialsError) as e:
+        except Exception as e:
             logger.warning(f"CloudWatch not available: {e}")
             self.cloudwatch = None
             self._connection_healthy = False
