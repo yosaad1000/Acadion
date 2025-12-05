@@ -142,7 +142,7 @@ export class OrganizationService {
   }
 
   /**
-   * Check if organization name is available
+   * Check if organization name is available with enhanced error handling
    */
   static async checkOrganizationNameAvailability(name: string): Promise<{ isAvailable: boolean; message: string }> {
     try {
@@ -153,6 +153,22 @@ export class OrganizationService {
         return {
           isAvailable: false,
           message: 'Organization name must be at least 2 characters'
+        }
+      }
+
+      if (normalizedName.length > 100) {
+        return {
+          isAvailable: false,
+          message: 'Organization name must be less than 100 characters'
+        }
+      }
+
+      // Validate name format
+      const nameRegex = /^[a-zA-Z0-9\s\-_.,!?()&]+$/
+      if (!nameRegex.test(normalizedName)) {
+        return {
+          isAvailable: false,
+          message: 'Organization name contains invalid characters'
         }
       }
 
@@ -182,10 +198,8 @@ export class OrganizationService {
           }
         }
         
-        return {
-          isAvailable: false,
-          message: 'Unable to check availability. Please try again.'
-        }
+        // Throw error to trigger retry mechanism
+        throw new Error(`Database error: ${error.message}`)
       }
       
       // Check if any returned names are exact matches (case-insensitive)
@@ -204,15 +218,18 @@ export class OrganizationService {
       
     } catch (error) {
       console.error('❌ Error checking organization name availability:', error)
-      return {
-        isAvailable: false,
-        message: 'Unable to check availability. Please try again.'
+      
+      // Re-throw to allow retry mechanism to handle it
+      if (error instanceof Error) {
+        throw error
       }
+      
+      throw new Error('Unable to check availability. Please try again.')
     }
   }
 
   /**
-   * Check if organization domain is available
+   * Check if organization domain is available with enhanced validation and error handling
    */
   static async checkOrganizationDomainAvailability(domain: string): Promise<{ isAvailable: boolean; message: string }> {
     try {
@@ -226,19 +243,41 @@ export class OrganizationService {
         }
       }
 
-      // Validate domain format
-      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/
+      // Enhanced domain format validation
+      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.[a-zA-Z]{2,}$/
       if (!domainRegex.test(normalizedDomain)) {
         return {
           isAvailable: false,
-          message: 'Invalid domain format'
+          message: 'Invalid domain format (e.g., example.edu)'
+        }
+      }
+
+      // Additional domain validation
+      if (normalizedDomain.length > 253) {
+        return {
+          isAvailable: false,
+          message: 'Domain name is too long'
+        }
+      }
+
+      if (normalizedDomain.includes('..')) {
+        return {
+          isAvailable: false,
+          message: 'Domain cannot contain consecutive dots'
+        }
+      }
+
+      if (normalizedDomain.startsWith('-') || normalizedDomain.endsWith('-')) {
+        return {
+          isAvailable: false,
+          message: 'Domain cannot start or end with hyphens'
         }
       }
 
       // Check for exact match with active organizations
       const { data, error } = await supabase
         .from('organizations')
-        .select('organization_id, name')
+        .select('organization_id, name, domain')
         .eq('is_active', true)
         .not('domain', 'is', null)
         .ilike('domain', normalizedDomain)
@@ -262,10 +301,8 @@ export class OrganizationService {
           }
         }
         
-        return {
-          isAvailable: false,
-          message: 'Unable to check domain availability. Please try again.'
-        }
+        // Throw error to trigger retry mechanism
+        throw new Error(`Database error: ${error.message}`)
       }
       
       const isAvailable = !data || data.length === 0
@@ -279,15 +316,18 @@ export class OrganizationService {
       
     } catch (error) {
       console.error('❌ Error checking organization domain availability:', error)
-      return {
-        isAvailable: false,
-        message: 'Unable to check domain availability. Please try again.'
+      
+      // Re-throw to allow retry mechanism to handle it
+      if (error instanceof Error) {
+        throw error
       }
+      
+      throw new Error('Unable to check domain availability. Please try again.')
     }
   }
 
   /**
-   * Create organization with administrator during onboarding
+   * Create organization with administrator during onboarding with enhanced error handling
    */
   static async createOrganizationWithAdmin(organizationData: {
     organizationName: string;
@@ -296,8 +336,35 @@ export class OrganizationService {
     adminEmail: string;
   }): Promise<{ success: boolean; message: string; organizationId?: string }> {
     try {
-      // First check if organization name is available
-      const availability = await this.checkOrganizationNameAvailability(organizationData.organizationName)
+      // Validate input data
+      const trimmedName = organizationData.organizationName.trim()
+      const trimmedDomain = organizationData.organizationDomain?.trim()
+      const trimmedAdminName = organizationData.adminName.trim()
+      const trimmedAdminEmail = organizationData.adminEmail.trim()
+
+      if (!trimmedName || trimmedName.length < 2) {
+        return {
+          success: false,
+          message: 'Organization name must be at least 2 characters'
+        }
+      }
+
+      if (!trimmedAdminName || trimmedAdminName.length < 2) {
+        return {
+          success: false,
+          message: 'Administrator name must be at least 2 characters'
+        }
+      }
+
+      if (!trimmedAdminEmail || !trimmedAdminEmail.includes('@')) {
+        return {
+          success: false,
+          message: 'Valid administrator email is required'
+        }
+      }
+
+      // Double-check organization name availability
+      const availability = await this.checkOrganizationNameAvailability(trimmedName)
       
       if (!availability.isAvailable) {
         return {
@@ -306,20 +373,37 @@ export class OrganizationService {
         }
       }
 
-      // Create organization
-      console.log('🔄 Attempting to create organization:', {
-        name: organizationData.organizationName,
-        description: organizationData.organizationDomain ? `Organization domain: ${organizationData.organizationDomain}` : undefined,
+      // Double-check domain availability if provided
+      if (trimmedDomain) {
+        const domainAvailability = await this.checkOrganizationDomainAvailability(trimmedDomain)
+        
+        if (!domainAvailability.isAvailable) {
+          return {
+            success: false,
+            message: domainAvailability.message
+          }
+        }
+      }
+
+      // Prepare organization data
+      const orgInsertData: any = {
+        name: trimmedName,
         is_active: true
-      });
+      }
+
+      // Add domain if provided
+      if (trimmedDomain) {
+        orgInsertData.domain = trimmedDomain
+      }
+
+      // Add description with admin info for reference
+      orgInsertData.description = `Created during onboarding. Admin: ${trimmedAdminName} (${trimmedAdminEmail})`
+
+      console.log('🔄 Attempting to create organization:', orgInsertData);
 
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
-        .insert({
-          name: organizationData.organizationName,
-          description: organizationData.organizationDomain ? `Organization domain: ${organizationData.organizationDomain}` : undefined,
-          is_active: true
-        })
+        .insert(orgInsertData)
         .select()
         .single()
       
@@ -331,9 +415,42 @@ export class OrganizationService {
           hint: orgError.hint,
           code: orgError.code
         })
+
+        // Handle specific error cases
+        if (orgError.code === '23505') { // Unique constraint violation
+          if (orgError.message.includes('name')) {
+            return {
+              success: false,
+              message: 'This organization name is already taken'
+            }
+          } else if (orgError.message.includes('domain')) {
+            return {
+              success: false,
+              message: 'This domain is already registered with another organization'
+            }
+          }
+        }
+
+        // Handle permission errors
+        if (orgError.code === '42501' || orgError.message?.includes('permission')) {
+          return {
+            success: false,
+            message: 'Permission denied. Please contact support.'
+          }
+        }
+
+        // Handle RLS errors
+        if (orgError.code === 'PGRST116' || orgError.message?.includes('row-level security')) {
+          return {
+            success: false,
+            message: 'Access denied. Please contact support.'
+          }
+        }
+
+        // Generic database error
         return {
           success: false,
-          message: `Failed to create organization: ${orgError.message}`
+          message: `Database error: ${orgError.message}`
         }
       }
 
@@ -347,6 +464,27 @@ export class OrganizationService {
       
     } catch (error) {
       console.error('❌ Error in organization creation flow:', error)
+      
+      // Handle network errors
+      if (error instanceof Error) {
+        if (error.message.includes('fetch') || error.message.includes('network')) {
+          return {
+            success: false,
+            message: 'Network error. Please check your connection and try again.'
+          }
+        }
+        
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+          return {
+            success: false,
+            message: 'Request timed out. Please try again.'
+          }
+        }
+
+        // Re-throw to allow retry mechanism to handle it
+        throw error
+      }
+      
       return {
         success: false,
         message: 'An unexpected error occurred. Please try again.'
