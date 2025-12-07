@@ -38,6 +38,159 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const lastFetchedUserId = useRef<string | null>(null);
   const currentUserRef = useRef<User | null>(null);
 
+  const fetchUserProfile = async (session: any) => {
+    if (!session?.user) {
+      console.log('❌ No session or user found');
+      return;
+    }
+
+    if (isFetchingProfile.current) {
+      console.log('⏳ Profile fetch already in progress, skipping...');
+      return;
+    }
+
+    isFetchingProfile.current = true;
+
+    try {
+      console.log('🔍 Fetching user profile with organization context...');
+
+      // First, try to get existing profile with organization context
+      const profileResult = await OrganizationService.getUserProfileWithContext();
+
+      if (profileResult.success && profileResult.user_id) {
+        console.log('✅ User profile found with organization context');
+
+        // Create user object from RPC result
+        const userData: User = {
+          auth_user_id: session.user.id,
+          user_id: profileResult.user_id,
+          organization_id: profileResult.organization_id || '',
+          email: profileResult.email || session.user.email || '',
+          name: profileResult.name || session.user.user_metadata?.name || 'Unknown User',
+          user_type: profileResult.active_role as 'teacher' | 'student' || 'student',
+          active_role: profileResult.active_role as 'teacher' | 'student' || 'student',
+          auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+          is_face_registered: false, // Will be updated from database if needed
+          created_at: new Date().toISOString()
+        };
+
+        // Get organization details if we have organization_id
+        if (profileResult.organization_id) {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('organization_id', profileResult.organization_id)
+            .single();
+
+          if (orgData) {
+            setOrganization(orgData);
+            userData.organization = orgData;
+          }
+        }
+
+        setUser(userData);
+        currentUserRef.current = userData;
+        setCurrentRole(userData.active_role);
+        setUserRoles([userData.active_role]);
+        localStorage.removeItem('selected_user_type');
+        return;
+      }
+
+      // No profile found, create one using RPC function
+      console.log('⚠️ No user profile found, creating with organization context...');
+
+      const createResult = await OrganizationService.ensureUserProfile();
+
+      if (createResult.success && createResult.user_id) {
+        console.log('✅ User profile created with organization context');
+
+        // Create user object from creation result
+        const userData: User = {
+          auth_user_id: session.user.id,
+          user_id: createResult.user_id,
+          organization_id: createResult.organization_id || '',
+          email: createResult.email || session.user.email || '',
+          name: createResult.name || session.user.user_metadata?.name || 'Unknown User',
+          user_type: createResult.active_role as 'teacher' | 'student' || 'student',
+          active_role: createResult.active_role as 'teacher' | 'student' || 'student',
+          auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+          is_face_registered: false,
+          created_at: new Date().toISOString()
+        };
+
+        // Get organization details
+        if (createResult.organization_id) {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('organization_id', createResult.organization_id)
+            .single();
+
+          if (orgData) {
+            setOrganization(orgData);
+            userData.organization = orgData;
+          }
+        }
+
+        setUser(userData);
+        currentUserRef.current = userData;
+        setCurrentRole(userData.active_role);
+        setUserRoles([userData.active_role]);
+        localStorage.removeItem('selected_user_type');
+        return;
+      }
+
+      // If RPC functions fail, create fallback user (should rarely happen)
+      console.warn('⚠️ RPC functions failed, creating fallback user');
+      const userType = localStorage.getItem('oauth_user_type') || 'student';
+
+      const fallbackUser: User = {
+        auth_user_id: session.user.id,
+        user_id: session.user.id,
+        organization_id: '', // Will be empty until profile is properly created
+        email: session.user.email || '',
+        name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
+        user_type: userType as 'teacher' | 'student',
+        active_role: userType as 'teacher' | 'student',
+        auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
+        is_face_registered: false,
+        created_at: new Date().toISOString()
+      };
+
+      setUser(fallbackUser);
+      currentUserRef.current = fallbackUser;
+      setCurrentRole(userType);
+      setUserRoles([userType]);
+      localStorage.removeItem('selected_user_type');
+
+    } catch (error) {
+      console.error('❌ Profile fetch error:', error);
+
+      // Create minimal fallback user
+      const userType = localStorage.getItem('oauth_user_type') || 'student';
+      const fallbackUser: User = {
+        auth_user_id: session.user.id,
+        user_id: session.user.id,
+        organization_id: '',
+        email: session.user.email || '',
+        name: session.user.user_metadata?.name || 'Unknown User',
+        user_type: userType as 'teacher' | 'student',
+        active_role: userType as 'teacher' | 'student',
+        auth_provider: 'google',
+        is_face_registered: false,
+        created_at: new Date().toISOString()
+      };
+
+      setUser(fallbackUser);
+      currentUserRef.current = fallbackUser;
+      setCurrentRole(userType);
+      setUserRoles([userType]);
+    } finally {
+      isFetchingProfile.current = false;
+      console.log('🏁 Profile fetch process completed');
+    }
+  };
+
   useEffect(() => {
     console.log('🔄 AuthContext initializing...');
 
@@ -47,159 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       isFetchingProfile.current = false;
     }, 8000);
-
-    const fetchUserProfile = async (session: any) => {
-      if (!session?.user) {
-        console.log('❌ No session or user found');
-        return;
-      }
-
-      if (isFetchingProfile.current) {
-        console.log('⏳ Profile fetch already in progress, skipping...');
-        return;
-      }
-
-      isFetchingProfile.current = true;
-
-      try {
-        console.log('🔍 Fetching user profile with organization context...');
-        
-        // First, try to get existing profile with organization context
-        const profileResult = await OrganizationService.getUserProfileWithContext();
-        
-        if (profileResult.success && profileResult.user_id) {
-          console.log('✅ User profile found with organization context');
-          
-          // Create user object from RPC result
-          const userData: User = {
-            auth_user_id: session.user.id,
-            user_id: profileResult.user_id,
-            organization_id: profileResult.organization_id || '',
-            email: profileResult.email || session.user.email || '',
-            name: profileResult.name || session.user.user_metadata?.name || 'Unknown User',
-            user_type: profileResult.active_role as 'teacher' | 'student' || 'student',
-            active_role: profileResult.active_role as 'teacher' | 'student' || 'student',
-            auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-            is_face_registered: false, // Will be updated from database if needed
-            created_at: new Date().toISOString()
-          };
-
-          // Get organization details if we have organization_id
-          if (profileResult.organization_id) {
-            const { data: orgData } = await supabase
-              .from('organizations')
-              .select('*')
-              .eq('organization_id', profileResult.organization_id)
-              .single();
-            
-            if (orgData) {
-              setOrganization(orgData);
-              userData.organization = orgData;
-            }
-          }
-
-          setUser(userData);
-          currentUserRef.current = userData;
-          setCurrentRole(userData.active_role);
-          setUserRoles([userData.active_role]);
-          localStorage.removeItem('selected_user_type');
-          return;
-        }
-
-        // No profile found, create one using RPC function
-        console.log('⚠️ No user profile found, creating with organization context...');
-        
-        const createResult = await OrganizationService.ensureUserProfile();
-        
-        if (createResult.success && createResult.user_id) {
-          console.log('✅ User profile created with organization context');
-          
-          // Create user object from creation result
-          const userData: User = {
-            auth_user_id: session.user.id,
-            user_id: createResult.user_id,
-            organization_id: createResult.organization_id || '',
-            email: createResult.email || session.user.email || '',
-            name: createResult.name || session.user.user_metadata?.name || 'Unknown User',
-            user_type: createResult.active_role as 'teacher' | 'student' || 'student',
-            active_role: createResult.active_role as 'teacher' | 'student' || 'student',
-            auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-            is_face_registered: false,
-            created_at: new Date().toISOString()
-          };
-
-          // Get organization details
-          if (createResult.organization_id) {
-            const { data: orgData } = await supabase
-              .from('organizations')
-              .select('*')
-              .eq('organization_id', createResult.organization_id)
-              .single();
-            
-            if (orgData) {
-              setOrganization(orgData);
-              userData.organization = orgData;
-            }
-          }
-
-          setUser(userData);
-          currentUserRef.current = userData;
-          setCurrentRole(userData.active_role);
-          setUserRoles([userData.active_role]);
-          localStorage.removeItem('selected_user_type');
-          return;
-        }
-
-        // If RPC functions fail, create fallback user (should rarely happen)
-        console.warn('⚠️ RPC functions failed, creating fallback user');
-        const userType = localStorage.getItem('oauth_user_type') || 'student';
-        
-        const fallbackUser: User = {
-          auth_user_id: session.user.id,
-          user_id: session.user.id,
-          organization_id: '', // Will be empty until profile is properly created
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || session.user.email || 'Unknown User',
-          user_type: userType as 'teacher' | 'student',
-          active_role: userType as 'teacher' | 'student',
-          auth_provider: session.user.app_metadata?.provider === 'google' ? 'google' : 'email',
-          is_face_registered: false,
-          created_at: new Date().toISOString()
-        };
-
-        setUser(fallbackUser);
-        currentUserRef.current = fallbackUser;
-        setCurrentRole(userType);
-        setUserRoles([userType]);
-        localStorage.removeItem('selected_user_type');
-
-      } catch (error) {
-        console.error('❌ Profile fetch error:', error);
-        
-        // Create minimal fallback user
-        const userType = localStorage.getItem('oauth_user_type') || 'student';
-        const fallbackUser: User = {
-          auth_user_id: session.user.id,
-          user_id: session.user.id,
-          organization_id: '',
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || 'Unknown User',
-          user_type: userType as 'teacher' | 'student',
-          active_role: userType as 'teacher' | 'student',
-          auth_provider: 'google',
-          is_face_registered: false,
-          created_at: new Date().toISOString()
-        };
-
-        setUser(fallbackUser);
-        currentUserRef.current = fallbackUser;
-        setCurrentRole(userType);
-        setUserRoles([userType]);
-      } finally {
-        isFetchingProfile.current = false;
-        console.log('🏁 Profile fetch process completed');
-      }
-    };
 
     const initAuth = async () => {
       try {
@@ -299,14 +299,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async (userType: 'teacher' | 'student') => {
     localStorage.setItem('oauth_user_type', userType);
-    
+
     // Use production URL for OAuth redirect to ensure consistency
-    const redirectUrl = import.meta.env.PROD 
+    const redirectUrl = import.meta.env.PROD
       ? 'https://acadion-gamma.vercel.app/auth/callback'
       : `${window.location.origin}/auth/callback`;
-    
+
     console.log('🔍 OAuth redirect URL:', redirectUrl);
-    
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -397,7 +397,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('🔄 Ensuring user profile exists...');
       const result = await OrganizationService.ensureUserProfile();
-      
+
       if (result.success) {
         console.log('✅ Profile ensured successfully');
         // Refresh the user profile
