@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AcademicCapIcon, UserGroupIcon, ChartBarIcon, CameraIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { AcademicCapIcon, UserGroupIcon, ChartBarIcon, CameraIcon } from '@heroicons/react/24/outline';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ const Landing: React.FC = () => {
             </span>
           </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-6 sm:mb-8 px-4 sm:px-0">
-            Revolutionize your classroom with AI-powered attendance tracking, 
+            Revolutionize your classroom with AI-powered attendance tracking,
             comprehensive student management, and real-time analytics.
           </p>
         </div>
@@ -54,7 +54,7 @@ const Landing: React.FC = () => {
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">AI Attendance</h3>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Automated facial recognition for effortless attendance tracking</p>
           </div>
-          
+
           <div className="text-center p-4 sm:p-6 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
             <div className="h-10 w-10 sm:h-12 sm:w-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
               <UserGroupIcon className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
@@ -62,7 +62,7 @@ const Landing: React.FC = () => {
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">Class Management</h3>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Create and manage classes with unique invite codes</p>
           </div>
-          
+
           <div className="text-center p-4 sm:p-6 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
             <div className="h-10 w-10 sm:h-12 sm:w-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
               <ChartBarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" />
@@ -70,7 +70,7 @@ const Landing: React.FC = () => {
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm sm:text-base">Real-time Analytics</h3>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Comprehensive insights and performance tracking</p>
           </div>
-          
+
           <div className="text-center p-4 sm:p-6 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
             <div className="h-10 w-10 sm:h-12 sm:w-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
               <AcademicCapIcon className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 dark:text-orange-400" />
@@ -91,7 +91,7 @@ const Landing: React.FC = () => {
 
           <div className="grid-responsive-2 gap-6 sm:gap-8">
             {/* Teacher Card */}
-            <div 
+            <div
               onClick={() => handleRoleSelection('teacher')}
               className="group cursor-pointer transform transition-all duration-300 hover:scale-105 touch-manipulation"
             >
@@ -102,7 +102,7 @@ const Landing: React.FC = () => {
                   </div>
                   <h4 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">I'm a Teacher</h4>
                   <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-6 leading-relaxed">
-                    Create and manage classes, track student attendance with AI, 
+                    Create and manage classes, track student attendance with AI,
                     generate reports, and monitor student performance.
                   </p>
                   <div className="space-y-2 sm:space-y-3 text-left">
@@ -131,7 +131,7 @@ const Landing: React.FC = () => {
             </div>
 
             {/* Student Card */}
-            <div 
+            <div
               onClick={() => handleRoleSelection('student')}
               className="group cursor-pointer transform transition-all duration-300 hover:scale-105 touch-manipulation"
             >
@@ -142,7 +142,7 @@ const Landing: React.FC = () => {
                   </div>
                   <h4 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4">I'm a Student</h4>
                   <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-6 leading-relaxed">
-                    Join classes with invite codes, register your face for automatic 
+                    Join classes with invite codes, register your face for automatic
                     attendance, and track your academic progress.
                   </p>
                   <div className="space-y-2 sm:space-y-3 text-left">
@@ -174,28 +174,9 @@ const Landing: React.FC = () => {
 
         {/* Bottom CTA */}
         <div className="text-center mt-12 sm:mt-16 pt-8 sm:pt-16 border-t border-gray-200 dark:border-gray-700">
-          {/* Organization Creation CTA */}
-          <div className="mb-8 sm:mb-12">
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 sm:p-8 border border-purple-100 dark:border-purple-800">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-                Setting up a new institution?
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-6">
-                Create your organization on Acadion and get started with comprehensive student management and AI-powered attendance tracking.
-              </p>
-              <button
-                onClick={() => navigate('/onboard/organization')}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl touch-manipulation"
-              >
-                <BuildingOfficeIcon className="h-5 w-5 mr-2" />
-                Create Organization
-              </button>
-            </div>
-          </div>
-
           <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 px-4 sm:px-0">
             Already have an account?{' '}
-            <button 
+            <button
               onClick={() => navigate('/login')}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold touch-manipulation transition-colors"
             >
