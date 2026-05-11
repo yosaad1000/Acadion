@@ -154,3 +154,11 @@ temp/
 # Local development files
 setup-local.bat
 setup-local.sh
+
+# Security - never commit these
+*.pem
+*.key
+.env.clean
+.env.vercel
+.env.production
+.env.staging
